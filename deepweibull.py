@@ -17,7 +17,7 @@ from scipy.special import gamma
 
 """
 Inputs:
-    - outcome_actual = an (N,2) tensor with elements t (time-to-event) and d (0=censored, 1=death).
+    - outcome_actual = an (N,2) tensor with elements time (time-to-event) and status (0=censored, 1=death).
     - weibull_param_pred = an (N,2) tensor with elements a and b, the predicted Weibull (alpha, beta) parameters. 
 Output:
     - the negative log-likelihood, i.e. -logL(weibull_param_pred;outcome_actual)
