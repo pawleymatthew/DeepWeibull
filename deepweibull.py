@@ -52,7 +52,32 @@ def weibull_activate(weibull_param):
 
 """
 Inputs:
-    - tensors: a list of four tensors, as in output of make_train_test()
+    - train_df, test_df: Pandas dataframe as per output of make_train_test()
+Outputs:
+    - train_x, test_x, train_y, test_y: in tensor form
+"""
+
+def make_tensors(train_df, test_df):
+
+    # separate the features and outcome variables
+    train_x = train_df.copy()
+    test_x = test_df.copy()
+    train_y = pd.DataFrame([train_x.pop(colname) for colname in ['time', 'status']]).T 
+    test_y = pd.DataFrame([test_x.pop(colname) for colname in ['time', 'status']]).T
+    # covert to tensor
+    train_x = tf.convert_to_tensor(train_x.values, tf.float32)
+    train_y = tf.convert_to_tensor(train_y.values, tf.float32)
+    test_x = tf.convert_to_tensor(test_x.values, tf.float32)
+    test_y = tf.convert_to_tensor(test_y.values, tf.float32)
+
+    return ({"train_x" : train_x,
+             "train_y" : train_y,
+             "test_x" : test_x,
+             "test_y" : test_y})
+
+"""
+Inputs:
+    - tensors: a list of four tensors, as in output of make_tensors()
     - learn_rate: the learning rate of the optimisation procedure
 Outputs:
     - model: the final compiled model
@@ -103,9 +128,6 @@ def train_deep_weibull(tensors,learn_rate, epochs, steps_per_epoch, validation_s
         validation_data=(tensors["test_x"], tensors["test_y"]), 
         validation_steps=validation_steps)
     
-    history = pd.DataFrame(training_history.history)
-    history['epoch'] = training_history.epoch
-    
     """
     Test the final trained model: 
         - using the training set (x values only)
@@ -118,13 +140,13 @@ def train_deep_weibull(tensors,learn_rate, epochs, steps_per_epoch, validation_s
     
     return ({
             "model" : model,
-            "training_history" : history,
+            "training_history" : training_history,
             "test_result" : test_result})
 
 """
 Inputs:
     - tensors: a list of tensors, e.g. as in output of make_train_test(), but only "test_x","test_y" actually get used.
-    - model:a trained model, as in "model" output from deep_weibull()
+    - model:a trained model, as in "model" output from train_deep_weibull()
 Outputs:
     - a Pandas dataframe with four columns 
         - "time","status" (actual values, from "test_y")
@@ -134,11 +156,7 @@ Outputs:
 def test_deep_weibull(tensors, model):
     test_predict = model.predict(tensors["test_x"], steps=1) # predict Weibull parameters using covariates
     test_predict = np.resize(test_predict, tensors["test_y"].shape) 
-    test_result = np.concatenate((tensors["test_y"], test_predict), axis=1)
-    test_result = pd.DataFrame({
-        "time" : test_result[:, 0], 
-        "status" : test_result[:, 1],
-        "alpha" : test_result[:, 2],
-        "beta" : test_result[:, 3]
-    })
+    test_result = np.concatenate((tensors["test_x"],tensors["test_y"], test_predict), axis=1)
+    test_result = pd.DataFrame(test_result)
+    test_result.columns = ['x1','x2','x3','time','status','alpha','beta']
     return test_result

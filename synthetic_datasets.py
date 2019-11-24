@@ -62,8 +62,8 @@ def synthdata_custom(N,N_c):
         'x1':[item[0] for item in x], 
         'x2':[item[1] for item in x],
         'x3':[item[2] for item in x],
-        'time':time,
-        'status':status
+        'time': time,
+        'status': status
     }
     df = pd.DataFrame(data)
     return df
@@ -73,28 +73,16 @@ Inputs:
     - df: a Pandas dataframe (N rows) with feature columns (names don't matter) and outcome columns called 'time' and 'status'
     - train_frac: the fraction of rows to be allocated to the training set
 Outputs:
-    - a named list of tensors:
-        - 'train_x' containing the training set features
-        - 'train_y' containing the training set outcomes
-        - 'test_x' containing the test set features
-        - 'test_y' containing the test set outcomes
+    - a named list of Pandas dataframes:
+        - 'train_df' containing the training set features and outcomes (columns: x1, x2, x3, time, status)
+        - 'test_df' containing the test set features features and outcomes (columns: x1, x2, x3, time, status)
 Description:
     Creates the training and test sets in the form (tensors) required for use in the model(s).
 """
 def make_train_test(df, train_frac):
     # randomly select inds to go in train/test sets
-    train_x = df.sample(frac=train_frac)
-    test_x = df.drop(train_x.index)
-    # remove time/status columns and put them in y train/test sets
-    train_y = pd.DataFrame([train_x.pop(colname) for colname in ['time', 'status']]).T 
-    test_y = pd.DataFrame([test_x.pop(colname) for colname in ['time', 'status']]).T
-    # convert all to tensors
-    train_x = tf.convert_to_tensor(train_x.values, tf.float32)
-    test_x = tf.convert_to_tensor(test_x.values, tf.float32)
-    train_y = tf.convert_to_tensor(train_y.values, tf.float32)
-    test_y = tf.convert_to_tensor(test_y.values, tf.float32)
-    # return named list of tensors
-    return ({"train_x" : train_x,
-             "train_y" : train_y,
-             "test_x" : test_x,
-             "test_y" : test_y})
+    train_df = df.sample(frac=train_frac)
+    test_df = df.drop(train_df.index)
+    # return named list of dataframes
+    return ({"train_df" : train_df,
+             "test_df" : test_df})

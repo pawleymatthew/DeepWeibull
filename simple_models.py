@@ -26,20 +26,33 @@ def simple_model_one_loglkhd(theta, phi, df):
 
 """
 Inputs:
-    - df: a Pandas dataframe (N rows) with feature columns (names don't matter) and outcome columns called 'time' and 'status'
+    - train_df: a Pandas dataframe as in output of make_train_test()
+    - test_df: a Pandas dataframe as in output of make_train_test()
+    - init_params: parameter values to initialise the optimisation 
 Outputs:
-    - mle: the parameters [theta_0,...,theta_p,phi] that minimise the negative log-likelihood
+    - parameters: the parameters [theta_0,...,theta_p,phi] that minimise the negative log-likelihood
     - convergence_success: whether the optimiser converged successfully
     - objective_function: the value of the objective function (negative log-likelihood) at the MLE
+    - test_result: the predictions of the fitted model on the test set
 """
 
-def simple_model_one(df, init_params):
-    fun = lambda x: -1 * simple_model_one_loglkhd(x[:-1], x[-1], df) # wrapper for negative log-lkhd function
+def simple_model_one(train_df, test_df, init_params):
+    # fit the model
+    fun = lambda x: -1 * simple_model_one_loglkhd(x[:-1], x[-1], train_df) # wrapper for negative log-lkhd function
     res = scipy.optimize.minimize(fun, method='Nelder-Mead', x0=init_params) # minimise negative log-lkhd
+    # make predictions on the test set
+    parameters = res.x
+    theta = parameters[0:-1]
+    phi = parameters[-1]
+    test_result = test_df.copy()
+    x = test_result.drop(["time", "status"], axis=1)
+    test_result["alpha"] = theta[0] + x.dot(np.array(theta[1:])) # alpha = theta_0 + < theta[1:p], x >
+    test_result["beta"] = phi # beta = phi
     return ({
-            "mle" : res.x, # the parameter values that minimise the negative log-lkhd
+            "parameters" : parameters, # the parameter values that minimise the negative log-lkhd
             "convergence_success" : res.success, # Boolean: whether the optimiser converged successfully
-            "objective_function" : res.fun # optimal value of the objective function
+            "objective_function" : res.fun, # optimal value of the objective function
+            "test_result" : test_result # the predictions of the fitted model on the test set
             }) 
 
 """
@@ -65,17 +78,33 @@ def simple_model_two_loglkhd(theta, phi, df):
 
 """
 Inputs:
-    - df: a Pandas dataframe (N rows) with feature columns (names don't matter) and outcome columns called 'time' and 'status'
+    - train_df: a Pandas dataframe as in output of make_train_test()
+    - test_df: a Pandas dataframe as in output of make_train_test()
+    - init_params: parameter values to initialise the optimisation 
 Outputs:
-    - mle: the parameters [theta_0,...,theta_p,phi_0,...,phi_p] that minimise the negative log-likelihood
+    - parameters: the parameters [theta_0,...,theta_p,phi] that minimise the negative log-likelihood
     - convergence_success: whether the optimiser converged successfully
     - objective_function: the value of the objective function (negative log-likelihood) at the MLE
+    - test_result: the predictions of the fitted model on the test set
 """
 
-def simple_model_two(df, init_params):
-    fun = lambda x: -1 * simple_model_two_loglkhd(x[:len(x)//2], x[len(x)//2:], df) # wrapper for negative log-lkhd function
+def simple_model_two(train_df, test_df, init_params):
+    # fit the model
+    fun = lambda x: -1 * simple_model_two_loglkhd(x[:len(x)//2], x[len(x)//2:], train_df) # wrapper for negative log-lkhd function
     res = scipy.optimize.minimize(fun, method='Nelder-Mead', x0=init_params) # minimise negative log-lkhd
+    # make predictions on the test set
+    parameters = res.x
+    length = len(parameters)
+    half_length = length//2
+    theta = parameters[:half_length]
+    phi = parameters[half_length:]
+    test_result = test_df.copy()
+    x = test_result.drop(['time', 'status'], axis=1)
+    test_result["alpha"] = theta[0] + x.dot(np.array(theta[1:])) # alpha = theta_0 + < theta[1:p], x >
+    test_result["beta"] = phi[0] + x.dot(np.array(phi[1:])) # beta = phi_0 + < phi[1:p], x >
     return ({
-            "mle" : res.x, # the parameter values that minimise the negative log-lkhd
+            "parameters" : parameters, # the parameter values that minimise the negative log-lkhd
             "convergence_success" : res.success, # Boolean: whether the optimiser converged successfully
-            "objective_function" : res.fun}) # optimal value of the objective function
+            "objective_function" : res.fun, # optimal value of the objective function
+            "test_result" : test_result # the predictions of the fitted model on the test set
+            }) 
