@@ -21,13 +21,13 @@ Inputs to run simulations:
 """
 # Inputs for the synthetic dataset
 synthdata_type = "custom"
-N = 10000
-N_c = 2500
+N = 500
+N_c = 50
 # Input for making the train/test sets
-train_frac = 1 - (10/N) 
+train_frac = 1 - (50/N) 
 # Inputs for the Deep Weibull model
 learn_rate = 0.05
-epochs = 100
+epochs = 40
 steps_per_epoch = 5
 validation_steps = 10
 # Initial parameters for simple model one
@@ -71,9 +71,9 @@ plt.ylim([0,5])
 plt.legend()
 plt.savefig('plt.png', bbox_inches='tight')
 # test the model on validation set
-test_deep_weibull = deep_weibull["test_result"]
+test_result_deep_weibull = deep_weibull["test_result"]
 # create csv file of validation set results
-test_deep_weibull.to_csv("deep_weibull_results.csv", index=False)
+test_result_deep_weibull.to_csv("deep_weibull_results.csv", index=False)
 
 """
 Run Simple Model One: 
@@ -83,8 +83,8 @@ Run Simple Model One:
 """
 
 simple_model_one = simple_model_one(train_df, test_df, init_params_one)
-test_result_one = simple_model_one["test_result"]
-test_result_one.to_csv("simple_model_one_results.csv", index=False)
+test_result_simple_model_one = simple_model_one["test_result"]
+test_result_simple_model_one.to_csv("simple_model_one_results.csv", index=False)
 
 """
 Run Simple Model Two: 
@@ -94,7 +94,25 @@ Run Simple Model Two:
 """
 
 simple_model_two = simple_model_two(train_df, test_df, init_params_two)
-test_result_two = simple_model_two["test_result"]
-test_result_two.to_csv("simple_model_two_results.csv", index=False)
+test_result_simple_model_two = simple_model_two["test_result"]
+test_result_simple_model_two.to_csv("simple_model_two_results.csv", index=False)
 
+"""
+Create scatter plots of the true/predicted parameter values
+"""
+def parameters_scatter(test_result, filename):
 
+    plt.figure()
+    plt.xlabel('Actual')
+    plt.ylabel('Predicted')
+    plt.scatter(test_result['true_alpha'], test_result['pred_alpha'], label='Alpha')
+    plt.scatter(test_result['true_beta'], test_result['pred_beta'], label='Beta')
+    plt.legend()
+    plt.savefig(filename, bbox_inches='tight')
+
+""" 
+Create the plots
+"""
+parameters_scatter(test_result_deep_weibull, "deep_weibull_parameters.png")
+parameters_scatter(test_result_simple_model_one, "simple_model_one.png")
+parameters_scatter(test_result_simple_model_two, "simple_model_two.png")
