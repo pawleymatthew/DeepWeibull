@@ -61,10 +61,12 @@ def make_tensors(train_df, test_df):
 
     # separate the features and outcome variables
     train_x = train_df.copy()
+    train_x = train_x.drop(["true_alpha", "true_beta"], axis=1)
     test_x = test_df.copy()
+    test_x = test_x.drop(["true_alpha", "true_beta"], axis=1)
     train_y = pd.DataFrame([train_x.pop(colname) for colname in ['time', 'status']]).T 
     test_y = pd.DataFrame([test_x.pop(colname) for colname in ['time', 'status']]).T
-    # covert to tensor
+    # convert to tensor
     train_x = tf.convert_to_tensor(train_x.values, tf.float32)
     train_y = tf.convert_to_tensor(train_y.values, tf.float32)
     test_x = tf.convert_to_tensor(test_x.values, tf.float32)
@@ -85,7 +87,12 @@ Outputs:
     - test_result: a Pandas dataframe with the outcome variables and corresponding predicted Weibull parameters.
 """
 
-def train_deep_weibull(tensors,learn_rate, epochs, steps_per_epoch, validation_steps):
+def deep_weibull(train_df, test_df, learn_rate, epochs, steps_per_epoch, validation_steps):
+
+    """
+    Make the tensors from the training/test sets
+    """
+    tensors = make_tensors(train_df, test_df)
 
     """
     Define the model:
@@ -127,36 +134,21 @@ def train_deep_weibull(tensors,learn_rate, epochs, steps_per_epoch, validation_s
         verbose=0,
         validation_data=(tensors["test_x"], tensors["test_y"]), 
         validation_steps=validation_steps)
-    
+      
     """
-    Test the final trained model: 
-        - using the training set (x values only)
-        - test_result: shows the time/status values alongside the model's predicted Weibull parameters
+    Test the trained Deep Weibull model on the test set
     """
-    
-    test_predict = model.predict(tensors["test_x"], steps=1) 
-    test_predict = np.resize(test_predict, tensors["test_y"].shape) 
-    test_result = np.concatenate((tensors["test_y"], test_predict), axis=1)
-    
+
+    test_predict = model.predict(tensors["test_x"], steps=1) # predict Weibull parameters using covariates
+    test_predict = np.resize(test_predict, tensors["test_y"].shape) # put into (,2) array
+    test_predict = pd.DataFrame(test_predict) # convert to dataframe
+    test_predict.columns = ["pred_alpha", "pred_beta"] # name columns
+    test_result = test_df.copy()
+    test_result.reset_index(inplace = True) # reset the index (before concat - probably better way of doing this)
+    test_result = pd.concat([test_result, test_predict], axis=1) # results = test data plus predictions
+    test_result.set_index("index", drop=True, inplace=True) # recover the index (after concat - probably better way of doing this)
+
     return ({
             "model" : model,
             "training_history" : training_history,
             "test_result" : test_result})
-
-"""
-Inputs:
-    - tensors: a list of tensors, e.g. as in output of make_train_test(), but only "test_x","test_y" actually get used.
-    - model:a trained model, as in "model" output from train_deep_weibull()
-Outputs:
-    - a Pandas dataframe with four columns 
-        - "time","status" (actual values, from "test_y")
-        - "alpha","beta" (the model's predicted Weibull parameters)s
-"""
-
-def test_deep_weibull(tensors, model):
-    test_predict = model.predict(tensors["test_x"], steps=1) # predict Weibull parameters using covariates
-    test_predict = np.resize(test_predict, tensors["test_y"].shape) 
-    test_result = np.concatenate((tensors["test_x"],tensors["test_y"], test_predict), axis=1)
-    test_result = pd.DataFrame(test_result)
-    test_result.columns = ['x1','x2','x3','time','status','alpha','beta']
-    return test_result

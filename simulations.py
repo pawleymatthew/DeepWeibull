@@ -1,5 +1,5 @@
 from synthetic_datasets import synthdata_noise, synthdata_custom, make_train_test
-from deepweibull import make_tensors, train_deep_weibull, test_deep_weibull
+from deepweibull import deep_weibull
 from simple_models import simple_model_one, simple_model_two
 
 from matplotlib import pyplot as plt
@@ -21,13 +21,13 @@ Inputs to run simulations:
 """
 # Inputs for the synthetic dataset
 synthdata_type = "custom"
-N = 10
-N_c = 1
+N = 10000
+N_c = 2500
 # Input for making the train/test sets
-train_frac = 0.7
+train_frac = 1 - (10/N) 
 # Inputs for the Deep Weibull model
-learn_rate = 0.1
-epochs = 500
+learn_rate = 0.05
+epochs = 100
 steps_per_epoch = 5
 validation_steps = 10
 # Initial parameters for simple model one
@@ -58,11 +58,10 @@ Run the Deep Weibull model:
 """
 
 # train the model
-tensors = make_tensors(train_df,test_df)
-train_deep_weibull = train_deep_weibull(tensors, learn_rate, epochs, steps_per_epoch, validation_steps)
+deep_weibull = deep_weibull(train_df, test_df, learn_rate, epochs, steps_per_epoch, validation_steps)
 # create plot of the training/validation loss
-hist = pd.DataFrame(train_deep_weibull["training_history"].history)
-hist['epoch'] = train_deep_weibull["training_history"].epoch
+hist = pd.DataFrame(deep_weibull["training_history"].history)
+hist['epoch'] = deep_weibull["training_history"].epoch
 plt.figure()
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
@@ -72,7 +71,7 @@ plt.ylim([0,5])
 plt.legend()
 plt.savefig('plt.png', bbox_inches='tight')
 # test the model on validation set
-test_deep_weibull = test_deep_weibull(tensors, train_deep_weibull["model"])
+test_deep_weibull = deep_weibull["test_result"]
 # create csv file of validation set results
 test_deep_weibull.to_csv("deep_weibull_results.csv", index=False)
 

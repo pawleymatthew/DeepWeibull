@@ -27,11 +27,13 @@ def synthdata_noise(N,N_c):
     status[censored] = 0 # set status indicator for censored patients to 0
     time[censored] = np.random.uniform(low=0,high=time[censored]) # simulate censoring time Uniform(0,old event time)
     data = {
-        'x1':[item[0] for item in x], 
-        'x2':[item[1] for item in x],
-        'x3':[item[2] for item in x],
-        'time':time,
-        'status':status
+        'x1':[item[0] for item in x], # covariate 1
+        'x2':[item[1] for item in x], # covariate 2
+        'x3':[item[2] for item in x], # covariate 3
+        'time': time, # simulated event/censoring time
+        'status': status, # 0=censored, 1=dead
+        'true_alpha' : a, # true alpha value used to simulate death time
+        'true_beta' : b # true beta value used to simulate death time
     }
     df = pd.DataFrame(data)
     return df
@@ -59,11 +61,13 @@ def synthdata_custom(N,N_c):
     status[censored] = 0 # set status indicator for censored to 0
     time[censored] = np.random.uniform(low=0,high=time[censored]) # simulate censoring time Uniform(0,old event time)
     data = {
-        'x1':[item[0] for item in x], 
-        'x2':[item[1] for item in x],
-        'x3':[item[2] for item in x],
-        'time': time,
-        'status': status
+        'x1':[item[0] for item in x], # covariate 1
+        'x2':[item[1] for item in x], # covariate 2
+        'x3':[item[2] for item in x], # covariate 3
+        'time': time, # simulated event/censoring time
+        'status': status, # 0=censored, 1=dead
+        'true_alpha' : a, # true alpha value used to simulate death time
+        'true_beta' : b # true beta value used to simulate death time
     }
     df = pd.DataFrame(data)
     return df
