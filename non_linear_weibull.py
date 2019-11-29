@@ -16,8 +16,8 @@ Outputs:
 
 def non_linear_weibull_data(N, N_c):
     
-    x = np.random.normal(loc=0.0, scale=1.0, size=(N,3)) # sim covariates (3 per individual)
-    df = pd.DataFrame(x, columns=['x{}'.format(i) for i in range(1, 4)]) # make dataframe
+    x = np.random.normal(loc=0.0, scale=1.0, size=(N,4)) # sim covariates (4 per individual)
+    df = pd.DataFrame(x, columns=['x{}'.format(i) for i in range(1, 5)]) # make dataframe
 
     # determine the Weibull parameters
     alpha = 50 + 2 * np.sign(x[:,0]) * np.square(x[:,0]) + 2 * np.multiply(x[:,0],x[:,1])
@@ -46,7 +46,7 @@ Simulate the data and write to a csv file.
 """
 # set inputs
 N = 30000
-N_c = 15000
+N_c = 8000
 
 # create dataframe
 df = non_linear_weibull_data(N, N_c)

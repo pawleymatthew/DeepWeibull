@@ -49,7 +49,7 @@ Simulate the data and write to a csv file.
 """
 # set inputs
 N = 30000
-N_c = 15000
+N_c = 8000
 theta_a = [50, 4, -4, 0, 0]
 theta_b = [1.1, 0.04, 0, -0.04, 0]
 

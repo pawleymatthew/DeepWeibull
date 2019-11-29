@@ -2,7 +2,6 @@ import numpy as np
 import random
 import math
 import pandas as pd
-import matplotlib.pyplot as plt
 import tensorflow as tf
 from keras.models import Sequential
 from keras.layers import Dense
@@ -87,7 +86,7 @@ Outputs:
     - test_result: a Pandas dataframe with the outcome variables and corresponding predicted Weibull parameters.
 """
 
-def deep_weibull(train_df, test_df, learn_rate, epochs, steps_per_epoch, validation_steps):
+def deep_weibull(train_df, test_df, learn_rate=0.01, epochs=100, steps_per_epoch=5, validation_steps=10):
 
     """
     Make the tensors from the training/test sets
