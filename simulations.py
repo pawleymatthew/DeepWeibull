@@ -1,4 +1,4 @@
-from synthetic_datasets import synthdata_noise, synthdata_custom, make_train_test
+from synthetic_datasets import synthdata_no_map, synthdata_linear_map, synthdata_custom_map, make_train_test
 from deepweibull import deep_weibull
 from simple_models import simple_model_one, simple_model_two
 
@@ -20,20 +20,26 @@ Inputs to run simulations:
 
 """
 # Inputs for the synthetic dataset
-synthdata_type = "custom"
+synthdata_type = "no_map"
 N = 500
-N_c = 50
+N_c = 0
+p = 3
+alpha = 50
+beta = 1.1
+theta = [50,1,-5,4]
+phi = [1.1,0.05,-0.05,0]
 # Input for making the train/test sets
 train_frac = 1 - (50/N) 
 # Inputs for the Deep Weibull model
-learn_rate = 0.05
-epochs = 40
+learn_rate = 0.01
+epochs = 100
 steps_per_epoch = 5
 validation_steps = 10
 # Initial parameters for simple model one
-init_params_one = [50,0,0,0,1]
+init_theta = [50,0,0,0]
 # Initial parameters for simple model two
-init_params_two = [50,0,0,0,1,0,0,0]
+init_phi_one = [1]
+init_phi_two = [1,0,0,0]
 
 """
 Prepare data: 
@@ -43,7 +49,7 @@ Prepare data:
 
 # simulate the dataset
 synthdata = globals()["synthdata_" + synthdata_type]
-df = synthdata(N, N_c)
+df = synthdata(N, N_c, p, alpha, beta)
 # create train and test sets
 sets = make_train_test(df, train_frac)
 train_df = sets["train_df"]
@@ -82,7 +88,7 @@ Run Simple Model One:
     - Create csv file of x, t,delta,alpha,beta values)
 """
 
-simple_model_one = simple_model_one(train_df, test_df, init_params_one)
+simple_model_one = simple_model_one(train_df, test_df, init_theta, init_phi_one)
 test_result_simple_model_one = simple_model_one["test_result"]
 test_result_simple_model_one.to_csv("simple_model_one_results.csv", index=False)
 
@@ -93,7 +99,7 @@ Run Simple Model Two:
     - Create csv file of x, t, delta, alpha,beta values
 """
 
-simple_model_two = simple_model_two(train_df, test_df, init_params_two)
+simple_model_two = simple_model_two(train_df, test_df, init_theta, init_phi_two)
 test_result_simple_model_two = simple_model_two["test_result"]
 test_result_simple_model_two.to_csv("simple_model_two_results.csv", index=False)
 

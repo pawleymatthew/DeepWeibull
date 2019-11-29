@@ -36,10 +36,10 @@ Outputs:
     - test_result: the predictions of the fitted model on the test set
 """
 
-def simple_model_one(train_df, test_df, init_params):
+def simple_model_one(train_df, test_df, init_theta, init_phi):
     # fit the model
     fun = lambda x: -1 * simple_model_one_loglkhd(x[:-1], x[-1], train_df) # wrapper function: maps x to -logL(x|train_df)
-    res = scipy.optimize.minimize(fun, x0=init_params) # minimise negative log-lkhd
+    res = scipy.optimize.minimize(fun, x0=init_theta + init_phi) # minimise negative log-lkhd
     # make predictions on the test set
     parameters = res.x # the optimal parameter values
     theta = parameters[0:-1] 
@@ -80,7 +80,8 @@ def simple_model_two_loglkhd(theta, phi, df):
 Inputs:
     - train_df: a Pandas dataframe as in output of make_train_test()
     - test_df: a Pandas dataframe as in output of make_train_test()
-    - init_params: parameter values to initialise the optimisation 
+    - init_theta: theta parameter values to initialise the optimisation
+    - init_phi: phi parameter values to initialise the optimisation 
 Outputs:
     - parameters: the parameters [theta_0,...,theta_p,phi] that minimise the negative log-likelihood
     - convergence_success: whether the optimiser converged successfully
@@ -88,10 +89,10 @@ Outputs:
     - test_result: the predictions of the fitted model on the test set
 """
 
-def simple_model_two(train_df, test_df, init_params):
+def simple_model_two(train_df, test_df, init_theta, init_phi):
     # fit the model
     fun = lambda x: -1 * simple_model_two_loglkhd(x[:len(x)//2], x[len(x)//2:], train_df) # wrapper for negative log-lkhd function
-    res = scipy.optimize.minimize(fun, x0=init_params) # minimise negative log-lkhd
+    res = scipy.optimize.minimize(fun, x0=init_theta + init_phi) # minimise negative log-lkhd
     # make predictions on the test set
     parameters = res.x
     half_length = len(parameters)//2
