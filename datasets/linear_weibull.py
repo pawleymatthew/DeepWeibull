@@ -57,7 +57,7 @@ theta_b = [1.1, 0.04, 0, -0.04, 0]
 df = linear_weibull_data(N, N_c, theta_a, theta_b)
 
 # save as csv file
-df.to_csv(r"datasets/linear_weibull_df.csv", index=False)
+df.to_csv(r"datasets/linear_weibull_data/linear_weibull_df.csv", index=False)
 
 """
 Split into training and test sets and write these to csv files.
@@ -69,5 +69,5 @@ train_frac = 0.8
 sets = make_train_test(df, train_frac)
 
 # write to csv files
-sets["train_df"].to_csv(r"datasets/linear_weibull_train_df.csv", index=False)
-sets["test_df"].to_csv(r"datasets/linear_weibull_test_df.csv", index=False)
+sets["train_df"].to_csv(r"datasets/linear_weibull_data/linear_weibull_train_df.csv", index=False)
+sets["test_df"].to_csv(r"datasets/linear_weibull_data/linear_weibull_test_df.csv", index=False)
