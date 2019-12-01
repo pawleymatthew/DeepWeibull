@@ -60,9 +60,7 @@ def make_tensors(train_df, test_df):
 
     # separate the features and outcome variables
     train_x = train_df.copy()
-    train_x = train_x.drop(["true_alpha", "true_beta"], axis=1)
     test_x = test_df.copy()
-    test_x = test_x.drop(["true_alpha", "true_beta"], axis=1)
     train_y = pd.DataFrame([train_x.pop(colname) for colname in ['time', 'status']]).T 
     test_y = pd.DataFrame([test_x.pop(colname) for colname in ['time', 'status']]).T
     # convert to tensor
@@ -86,7 +84,7 @@ Outputs:
     - test_result: a Pandas dataframe with the outcome variables and corresponding predicted Weibull parameters.
 """
 
-def deep_weibull(train_df, test_df, learn_rate=0.01, epochs=100, steps_per_epoch=5, validation_steps=10):
+def deep_weibull(train_df, test_df, learn_rate=0.02, epochs=100, steps_per_epoch=5, validation_steps=10):
 
     """
     Make the tensors from the training/test sets
@@ -105,9 +103,10 @@ def deep_weibull(train_df, test_df, learn_rate=0.01, epochs=100, steps_per_epoch
     """
 
     model = Sequential()
-    model.add(Dense(3, input_dim=tensors["train_x"].shape[1], activation='relu'))
-    model.add(Dense(3, activation='relu'))
-    model.add(Dense(3, activation='relu'))
+    model.add(Dense(16, input_dim=tensors["train_x"].shape[1], activation='relu'))
+    model.add(Dense(16, activation='relu'))
+    model.add(Dense(16, activation='relu'))
+    model.add(Dense(8, activation='relu'))
     model.add(Dense(2)) # layer with 2 nodes (alpha and beta)
     model.add(Activation(weibull_activate)) # apply custom activation function (exp and softplus)
     """

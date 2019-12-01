@@ -11,7 +11,7 @@ Inputs:
     - N : a positive integer, the number of individuals
     - N_c : an integer in [0,N], number of censored individuals
 Outputs:
-    - df :  a pd dataframe with N rows and columns ("x1",..."x_","time","status","true_alpha","true_beta)
+    - df :  a pd dataframe with N rows and columns ("x1",..."x4","time","status")
 """
 
 def non_linear_weibull_data(N, N_c):
@@ -36,8 +36,6 @@ def non_linear_weibull_data(N, N_c):
     # add to dataframe
     df["time"] = time 
     df["status"] = status
-    df["true_alpha"] = alpha
-    df["true_beta"] = beta
 
     return df
 
@@ -46,7 +44,7 @@ Simulate the data and write to a csv file.
 """
 # set inputs
 N = 30000
-N_c = 8000
+N_c = 10000
 
 # create dataframe
 df = non_linear_weibull_data(N, N_c)

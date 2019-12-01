@@ -32,7 +32,6 @@ def run_model(model_name, dataset_name):
     # write to csv
     test_result_df.to_csv(results_path, index=False)
 
-
 """
 Repeat for all models and datasets
 """
@@ -40,4 +39,5 @@ Repeat for all models and datasets
 for model_name in ["deep_weibull", "simple_model_one", "simple_model_two"]:
     for dataset_name in ["linear_weibull", "non_linear_weibull"]:
         run_model(model_name, dataset_name)
+
 

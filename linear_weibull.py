@@ -12,7 +12,7 @@ Inputs:
     - theta_a : a list, the regression parameters for the alpha Weibull parameter
     - theta_b : a list, the regression parameters for the bet Weibull parameter
 Outputs:
-     - df :  a pd dataframe with N rows and columns ("x1",..."x_","time","status","true_alpha","true_beta)
+     - df :  a pd dataframe with N rows and columns ("x1",..."x_","time","status")
 """
 
 def linear_weibull_data(N, N_c, theta_a, theta_b):
@@ -39,8 +39,6 @@ def linear_weibull_data(N, N_c, theta_a, theta_b):
     # add to dataframe
     df["time"] = time 
     df["status"] = status
-    df["true_alpha"] = alpha
-    df["true_beta"] = beta
 
     return df
 
@@ -49,9 +47,10 @@ Simulate the data and write to a csv file.
 """
 # set inputs
 N = 30000
-N_c = 8000
+N_c = 15000
 theta_a = [50, 4, -4, 0, 0]
 theta_b = [1.1, 0.04, 0, -0.04, 0]
+
 
 # create dataframe
 df = linear_weibull_data(N, N_c, theta_a, theta_b)
