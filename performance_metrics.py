@@ -1,69 +1,78 @@
 import numpy as np
 import pandas as pd
-import math
-import random
-import matplotlib.pyplot as plt
-from lifelines.utils import concordance_index
 from weibull_dist import weibull_survival
 
 """
-Inputs:
-    - i : index of an individual
-    - time : the event times
-    - status : the censoring statuses
-Outputs:
-    - comparable_index : list of individuals {j} such that (i,j) are comparable pairs
-"""
-
-def comparable_index(i, time, status):
-
-    if status[i] == 0:
-        return [] # no comparable pairs (i,j)
-    else: 
-        return time[time > time[i]].index.tolist() # all j such that t_i < t_j
-
-"""
-Inputs:
-    - i : the index of an individual 
-    - j : the index of a different individual (such that (i,j) is comparable)
-    - time_i, time_j : the event/censoring times
-    - alpha_i, beta_i : the Weibull parameters of i (under the model, i.e. pred_alpha, pred_beta)
-    - alpha_j, beta_j : the Weibull parameters of j (under the model, i.e. pred_alpha, pred_beta)
-Outputs:
-    - concordant : Boolean value, concordant (True) or not (False)
-"""
-
-def concordant(i, j, time_i, alpha_i, beta_i, time_j, alpha_j, beta_j):
-
-    sf_i = weibull_survival(time_i, alpha_i, beta_i) # S(t_i ; a_i, b_i)
-    sf_j = weibull_survival(time_i, alpha_j, beta_j) # S(t_i ; a_j, b_j)
-    
-    return sf_i < sf_j
-
-"""
-Inputs:
-    - test_result : a Pandas dataframe of the test result
-    - sample_frac : for estimating the c-index based on sample of individuals (if speed is an issue)
-Outputs:
+Input:
+    - test_result : Pandas dataframe of time, status, pred_alpha, pred_beta
+Output:
     - the time-dependent concordance index
 """
 
-def time_dependent_concordance(test_result, sample_frac=1):
+def time_dependent_concordance(test_result):
 
-    # take a sample of the data (and reset index)
-    test_result = test_result.sample(frac=sample_frac).reset_index()
+    test_result.sort_values(by="time", ascending=True, inplace=True) # sort by time column
+    N = test_result.shape[0]
 
-    # make lists from the columns
-    time = test_result["time"]
-    status = test_result["status"]
-    alpha = test_result["pred_alpha"]
-    beta = test_result["pred_beta"]
+    # initialise counts of comparable and concordant pairs
+    comp = 0
+    conc = 0
 
-    # list of all comparable pairs (each pair as list)
-    pairs = [[i,j] for i in range(test_result.shape[0]) for j in comparable_index(i,time,status)]
+    for i in range(N-1):
+        if test_result.at[test_result.index[i], "status"] == 1:
 
-    # number of concordant pairs divided by number of comparable pairs
-    c = sum([concordant(pair[0],pair[1],time[pair[0]],alpha[pair[0]],beta[pair[0]],time[pair[1]],alpha[pair[1]],beta[pair[1]]) for pair in pairs])
-    c /= len(pairs)
+            t_i = test_result.at[test_result.index[i], "time"]
+            alpha_i = test_result.at[test_result.index[i], "pred_alpha"]
+            beta_i = test_result.at[test_result.index[i], "pred_beta"]
 
-    return c
+            p = weibull_survival(t_i, alpha_i, beta_i) # save S(t_i|x_i) in memory
+
+            for j in range(i+1,N): # for individuals with surival time >= t_i
+                
+                t_j = test_result.at[test_result.index[j], "time"]
+                
+                if t_i < t_j: # this step is redundant if there are no ties
+
+                    comp += 1 # (i,j) are comparable
+
+                    alpha_j = test_result.at[test_result.index[j], "pred_alpha"]
+                    beta_j = test_result.at[test_result.index[j], "pred_beta"]
+
+                    if p < weibull_survival(t_i, alpha_j, beta_j):
+
+                        conc += 1 # (i,j) are concordant
+
+    return conc/comp
+
+"""
+Input:
+    - test_result : Pandas dataframe of time, status, pred_alpha, pred_beta
+    - t : the fixed time t to evaluate Brier score with respect to 
+Output:
+    - the Brier score (t fixed, not integrated Brier score)
+"""
+
+def brier(test_result, t):
+
+    brier_df = test_result.copy()
+
+    brier_df["dead_by_t"] = (brier_df["time"] <= t) and (brier_df["status"] == 1) # death occurred by time t
+    brier_df["survive_t"] = brier_df["time"] > t
+    
+    brier_score = 0
+    N = brier_df.shape[0]
+
+    for i in range(N):
+
+        t_i = test_result.at[test_result.index[i], "time"]
+        alpha_i = test_result.at[test_result.index[i], "pred_alpha"]
+        beta_i = test_result.at[test_result.index[i], "pred_beta"]
+        S_i = weibull_survival(t_i, alpha_i, beta_i)
+
+        brier_score += S_i**2 * test_result.at[test_result.index[i], "dead_by_t"] 
+        brier_score += (1-S_i)**2 * test_result.at[test_result.index[i], "survive_t"] 
+
+    brier_score /= N
+
+    return brier_score
+

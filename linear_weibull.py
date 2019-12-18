@@ -47,9 +47,9 @@ Simulate the data and write to a csv file.
 """
 # set inputs
 N = 30000
-N_c = 15000
-theta_a = [50, 4, -4, 0, 0]
-theta_b = [1.1, 0.04, 0, -0.04, 0]
+N_c = 5000
+theta_a = [50, 8, -8, 0, 0]
+theta_b = [1.1, 0.1, 0, -0.1, 0]
 
 
 # create dataframe
@@ -62,7 +62,7 @@ df.to_csv(r"datasets/linear_weibull_data/linear_weibull_df.csv", index=False)
 Split into training and test sets and write these to csv files.
 """
 
-train_frac = 0.8
+train_frac = 0.9
 
 # make the train/test sets
 sets = make_train_test(df, train_frac)

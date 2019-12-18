@@ -36,8 +36,11 @@ def run_model(model_name, dataset_name):
 Repeat for all models and datasets
 """
 
-for model_name in ["deep_weibull", "simple_model_one", "simple_model_two"]:
-    for dataset_name in ["linear_weibull", "non_linear_weibull"]:
+models = ["deep_weibull", "simple_model_one", "simple_model_two"]
+datasets = ["linear_weibull", "non_linear_weibull","metabric"]
+
+for model_name in models:
+    for dataset_name in datasets:
         run_model(model_name, dataset_name)
 
 

@@ -4,10 +4,7 @@ import math
 import pandas as pd
 import tensorflow as tf
 from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import LSTM
-from keras.layers import Activation
-from keras.layers import Masking
+from keras.layers import Dense, LSTM, Activation, Masking, Dropout
 from keras.optimizers import RMSprop
 from keras import backend as k
 from sklearn.preprocessing import normalize
@@ -84,7 +81,7 @@ Outputs:
     - test_result: a Pandas dataframe with the outcome variables and corresponding predicted Weibull parameters.
 """
 
-def deep_weibull(train_df, test_df, learn_rate=0.02, epochs=100, steps_per_epoch=5, validation_steps=10):
+def deep_weibull(train_df, test_df, learn_rate=0.01, epochs=150, steps_per_epoch=5, validation_steps=10):
 
     """
     Make the tensors from the training/test sets
@@ -94,23 +91,28 @@ def deep_weibull(train_df, test_df, learn_rate=0.02, epochs=100, steps_per_epoch
     """
     Define the model:
         - input layer of appropriate length (i.e. number of features)
-        - hidden layer of length 32
+        - hidden layer (number covariates)
         - relu activation function
-        - hidden layer of length 32
+        - hidden layer (2 * number covariates)
         - relu activation function
-        - output layer of length 2
+        - output layer (number covariates)
         - exp and softplus activation functions applied (to zeroth and first elements respectively)
+        - dropout probability of 0.2
     """
+
+    p = tensors["train_x"].shape[1] # number of covariates
 
     model = Sequential()
-    model.add(Dense(16, input_dim=tensors["train_x"].shape[1], activation='relu'))
-    model.add(Dense(16, activation='relu'))
-    model.add(Dense(16, activation='relu'))
-    model.add(Dense(8, activation='relu'))
+    model.add(Dense(2*p, input_dim=p, activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(2*p, activation='relu'))
+    model.add(Dropout(0.2))
+    model.add(Dense(p, activation='relu'))
+    model.add(Dropout(0.2))
     model.add(Dense(2)) # layer with 2 nodes (alpha and beta)
-    model.add(Activation(weibull_activate)) # apply custom activation function (exp and softplus)
+    model.add(Activation(weibull_activate)) # apply custom activation function (exp and softplus
+    
     """
-
     Compile the model:
         - using the (negative) log-likelihood for the Weibull as the loss function
         - using Root Mean Square Prop optimisation (common) and customisable learning rate
