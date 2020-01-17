@@ -21,7 +21,7 @@ def simple_model_one_loglkhd(theta_a, theta_b, df):
         return - math.inf # L=0 so l=-infinity
     
     l = np.sum(df["status"] * np.log(b * np.power(a,-b) * np.power(df["time"],b-1))) # first sum of l
-    l -= np.sum(np.power(df["time"]/a, b-1)) # second sum of l
+    l -= np.sum(np.power(df["time"]/a, b)) # second sum of l
 
     return l
 
@@ -32,8 +32,6 @@ Inputs:
     - init_params: parameter values to initialise the optimisation 
 Outputs:
     - parameters: the parameters [theta_0,...,theta_p,phi] that minimise the negative log-likelihood
-    - convergence_success: whether the optimiser converged successfully
-    - objective_function: the value of the objective function (negative log-likelihood) at the MLE
     - test_result: the predictions of the fitted model on the test set
 """
 
@@ -42,25 +40,24 @@ def simple_model_one(train_df, test_df):
     # intialise parameters for the model
     p = train_df.shape[1] - 2 # number of covariates (number of columns excluding time, status)
     mean_time = train_df["time"].mean() # compute mean event time for estimate of alpha
-    init_theta_a = [mean_time] + [0]*p # [*,0,...,0]
-    init_theta_b = [1] # [1]
-    init_params = init_theta_a + init_theta_b
-   
+    init_theta_a = [mean_time] + [0]*p # initial guess of alpha parameters is [*,0,...,0]
+    init_theta_b = [1] # initial guess of beta parameters is [1]
+    
     # fit the model
+    init_params = init_theta_a + init_theta_b
     fun = lambda x: -1 * simple_model_one_loglkhd(x[:-1], x[-1], train_df) # wrapper function: maps x to -logL(x|train_df)
     res = scipy.optimize.minimize(fun, x0 = init_params) # minimise negative log-lkhd
+    
     # make predictions on the test set
-    parameters = res.x # the optimal parameter values
-    theta_a = parameters[0:-1] 
+    parameters = res.x 
+    theta_a = parameters[0:-1]
     theta_b = parameters[-1]
     test_result = test_df.copy()
     x = test_result.drop(["time", "status"], axis=1)
     test_result["pred_alpha"] = theta_a[0] + x.dot(np.array(theta_a[1:])) # alpha = thetaa_0 + < thetaa[1:p], x >
     test_result["pred_beta"] = theta_b # beta = theta_b
     return ({
-            "parameters" : parameters, # the parameter values that minimise the negative log-lkhd
-            "convergence_success" : res.success, # Boolean: whether the optimiser converged successfully
-            "objective_function" : res.fun, # optimal value of the objective function
+            "parameters" : theta_a + theta_b, # the parameter values that minimise the negative log-lkhd
             "test_result" : test_result # the predictions of the fitted model on the test set
             }) 
 
@@ -79,22 +76,18 @@ def simple_model_two_loglkhd(theta_a, theta_b, df):
     b = theta_b[0] + x.dot(np.array(theta_b[1:])) # beta = thetab_0 + < thetab[1:p], x >
     
     if True in (item <= 0 for item in pd.concat([a,b])): # all alpha and beta values must be positive
-        return - math.inf # L=0 so l=-infinity
+        return -1 * math.inf # L=0 so l=-infinity
     
     l = np.sum(df["status"] * np.log(b * np.power(a,-b) * np.power(df["time"],b-1))) # first sum of l
-    l -= np.sum(np.power(df["time"]/a, b-1)) # second sum of l
+    l -= np.sum(np.power(df["time"]/a, b)) # second sum of l
     return l
 
 """
 Inputs:
     - train_df: a Pandas dataframe as in output of make_train_test()
-    - test_df: a Pandas dataframe as in output of make_train_test()
-    - init_theta: theta parameter values to initialise the optimisation
-    - init_phi: phi parameter values to initialise the optimisation 
+    - test_df: a Pandas dataframe as in output of make_train_test() 
 Outputs:
     - parameters: the parameters [theta_0,...,theta_p,phi] that minimise the negative log-likelihood
-    - convergence_success: whether the optimiser converged successfully
-    - objective_function: the value of the objective function (negative log-likelihood) at the MLE
     - test_result: the predictions of the fitted model on the test set
 """
 
@@ -121,7 +114,5 @@ def simple_model_two(train_df, test_df):
     test_result["pred_beta"] = theta_b[0] + x.dot(np.array(theta_b[1:])) # beta = phi_0 + < phi[1:p], x >
     return ({
             "parameters" : parameters, # the parameter values that minimise the negative log-lkhd
-            "convergence_success" : res.success, # Boolean: whether the optimiser converged successfully
-            "objective_function" : res.fun, # optimal value of the objective function
             "test_result" : test_result # the predictions of the fitted model on the test set
             }) 

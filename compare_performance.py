@@ -1,17 +1,14 @@
 import pandas as pd
 import numpy as np
 from itertools import product
-from performance_metrics import time_dependent_concordance, brier
+from performance_metrics import time_dependent_concordance, integrated_brier
 
 models = ["deep_weibull", "simple_model_one", "simple_model_two"]
 datasets = ["linear_weibull", "non_linear_weibull","metabric"]
 
-models = ["deep_weibull"]
-datasets = ["linear_weibull", "non_linear_weibull"]
-
 performance_df = pd.DataFrame(list(product(models, datasets)), columns=['model', 'dataset'])
 c_index = []
-brier_score = []
+int_brier_score = []
 
 for model_name in models:
     for dataset_name in datasets:
@@ -23,11 +20,11 @@ for model_name in models:
         c_index.append(c)
 
         # integrated brier score
-        b = brier(test_result, t=40)
-        brier_score.append(b)
+        b = integrated_brier(test_result)
+        int_brier_score.append(b)
 
 performance_df["c_index"] = c_index
-performance_df["brier_score"] = brier_score
+performance_df["int_brier_score"] = int_brier_score
 
 print(performance_df)
 
