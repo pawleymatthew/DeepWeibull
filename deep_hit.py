@@ -1,37 +1,37 @@
 import numpy as np
 import pandas as pd
+import math
 import torch
 import torchtuples as tt
+
 from pycox.models import DeepHitSingle
-from make_train_test import make_train_test
+from pycox.evaluation import EvalSurv
 
 from sklearn.preprocessing import StandardScaler
-from sklearn_pandas import DataFrameMapper 
+from sklearn_pandas import DataFrameMapper
 
-import matplotlib.pyplot as plt
+from make_train_test import make_train_test
 
-"""
-Inputs:
-    - train_df : Pandas dataframe
-    - test_df : Pandas dataframe
-    - num_durations : number of timepoints to use in discretisation
-    - discrete_scheme : scheme used to discretise time, either 'quantiles' (default) or 'equidistant'
-    - num_nodes : list of layer widths (length of list is number of hidden layers)
-    - learn_rate: the learning rate of the optimisation procedure
-    - epochs :
-    - batch_size :
-    - batch_norm : 
-    - dropout : 
-    - alpha : (>0) the hyperparameter in the total loss function (NB: as per DeepHit paper)
-    - sigma : (>0) hyperparameter of L_2 loss function
-    - smooth_points : number of interpolation points used for smoothing the survival curve (0 = no smoothing)
-Outputs:
-    - model: the final compiled model
-    - training_history: a summary of the loss and validation loss at each epoch
-    - test_result: a Pandas dataframe with the outcome variables and corresponding predicted Weibull parameters.
-"""
 
-def deep_hit(train_df, test_df, num_durations=19, discrete_scheme='quantiles', num_nodes=[32,32], learn_rate=0.02, epochs=150, batch_norm=True, batch_size=32, dropout=0.1, alpha=0.1, sigma=0.1, smooth_points=10):
+def deep_hit(train_df, test_df, learn_rate=0.01, epochs=150, batch_size=128, alpha=1, sigma=0.2):
+
+    """
+    DESCRIPTION:
+        Runs the DeepHit model (with K=1, single event).
+    INPUT:
+        - train_df : Pandas dataframe
+        - test_df : Pandas dataframe
+        - num_nodes : list of layer widths (length of list is number of hidden layers)
+        - learn_rate: the learning rate of the optimisation procedure
+        - epochs :
+        - batch_size :
+        - alpha : (>0) the hyperparameter in the total loss function (NB: as per DeepHit paper)
+        - sigma : (>0) hyperparameter of L_2 loss function
+    OUTPUT:
+        - model: the final compiled model
+        - training_history: a summary of the loss and validation loss at each epoch
+        - test_result: a Pandas dataframe with the outcome variables and corresponding predicted Weibull parameters.
+    """
 
     """
     Make validation set, separate covariates and outcomes, then convert the covariates to float32
@@ -53,15 +53,16 @@ def deep_hit(train_df, test_df, num_durations=19, discrete_scheme='quantiles', n
 
     """
     DeepHit is a discrete-time model, so need to discretise the time points. 
-    Can either discretise with equidistant grid or gridpoints can be determined by quantiles.
-    Function input discrete_scheme controls this (default: 'quantiles').
-    The grid has num_durations time points.
+    Use partition {0,1,...,T_max} where T_max = ceiling of maximum event/censoring time in training set
     """
 
-    labtrans = DeepHitSingle.label_transform(num_durations, scheme=discrete_scheme)
-    get_target = lambda df: (df['time'].values, df['status'].values)
+    num_durations = math.ceil(train_df["time"].max()) # ceiling of maximum event/censoring time in training set
+    labtrans = DeepHitSingle.label_transform(num_durations, scheme='equidistant') # set up partition
+    get_target = lambda df: (df['time'].values, df['status'].values) 
     train_y = labtrans.fit_transform(*get_target(train_df))
     val_y = labtrans.transform(*get_target(val_df))
+
+    test_time, test_status = get_target(test_df)
 
     """
     Define the DeepHit model. Since K=1 (single event) the architecture is very simple.
@@ -69,9 +70,11 @@ def deep_hit(train_df, test_df, num_durations=19, discrete_scheme='quantiles', n
     """
 
     # use MLPVanilla from torchtuples
-    in_features = train_x.shape[1] # number of input nodes = number of covariates
+    p = train_x.shape[1] # number of covariates
+    in_features = p # number of input nodes = number of covariates
     out_features = labtrans.out_features # equals num_durations 
-    net = tt.practical.MLPVanilla(in_features, num_nodes, out_features, batch_norm, dropout)
+    num_nodes = [3*p, 5*p, 3*p] # layer wdiths as stated in DeepHit paper
+    net = tt.practical.MLPVanilla(in_features, num_nodes, out_features, batch_norm=True, dropout=0.1)
 
     """
     Set learning parameters and fit the model.
@@ -94,32 +97,25 @@ def deep_hit(train_df, test_df, num_durations=19, discrete_scheme='quantiles', n
     Predict the survival curves for the test set individuals
     """
 
-    test_result = model.interpolate(smooth_points).predict_surv_df(test_x)
-
+    test_result = model.predict_surv_df(test_x)
+    test_result = test_result.transpose()
+    test_result["time"] = test_time # add the actual event/censoring time to the df
+    test_result["status"] = test_status # add the event indicator to the df
+    
     return ({
         "model" : model,
         "training_history" : training_history,
         "test_result" : test_result})
 
-"""
-Testing it works...
-"""
 
-dataset_name = "metabric"
+def deep_hit_zero_alpha(train_df, test_df, learn_rate=0.01, epochs=150, batch_size=128):
 
-# filepaths of input csv files
-train_path = "datasets/" + dataset_name + "_data/" + dataset_name + "_train_df.csv"
-test_path = "datasets/" + dataset_name + "_data/" + dataset_name + "_test_df.csv"
+    """
+    DESCRIPTION:
+        Runs the DeepHit model in deep_hit() (with K=1, single event) with alpha hyperparameter equal to 0.
+    """
 
-# filepath of output csv file
-train_df = pd.read_csv(train_path)
-test_df = pd.read_csv(test_path)
+    # sigma hyperparameter doesn't get used when alpha=0, but must be positive in the function
+    epsilon = 1
 
-run = deep_hit(train_df, test_df)
-surv = run["test_result"]
-print(surv)
-
-surv.iloc[:, :50].plot(drawstyle='steps-post')
-plt.ylabel('S(t)')
-_ = plt.xlabel('t')
-plt.savefig('deep_hit_S_curve.png')
+    return deep_hit(train_df, test_df, learn_rate=learn_rate, epochs=epochs, batch_size=batch_size, alpha=0.0, sigma=epsilon)

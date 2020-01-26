@@ -1,7 +1,7 @@
 import pandas as pd
 
 from deep_weibull import deep_weibull
-from deep_hit import deep_hit
+from deep_hit import deep_hit, deep_hit_zero_alpha
 from simple_models import simple_model_one, simple_model_two
 
 def run_model(model_name, dataset_name):
@@ -29,7 +29,8 @@ def run_model(model_name, dataset_name):
 
     # run the model on the dataset
     model = globals()[model_name]
-    test_result_df = model(train_df, test_df)["test_result"]
+    run = model(train_df, test_df)
+    test_result_df = run["test_result"]
     # write to csv
     test_result_df.to_csv(results_path, index=False)
     
@@ -37,11 +38,10 @@ def run_model(model_name, dataset_name):
 Repeat for all models and datasets
 """
 
-"""
-models = ["deep_weibull", "simple_model_one", "simple_model_two"]
-datasets = ["linear_weibull", "non_linear_weibull","metabric"]
+models = ["deep_weibull", "simple_model_one", "simple_model_two", "deep_hit", "deep_hit_zero_alpha"]
+datasets = ["linear_weibull", "non_linear_weibull"]
 
 for model_name in models:
     for dataset_name in datasets:
         run_model(model_name, dataset_name)
-"""
+

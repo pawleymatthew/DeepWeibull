@@ -1,30 +1,46 @@
 import pandas as pd
 import numpy as np
 from itertools import product
-from performance_metrics import time_dependent_concordance, integrated_brier
+from perf_metrics_weibull import c_td_weibull, int_brier_weibull
+from perf_metrics_deephit import c_td_deep_hit, int_brier_deep_hit
 
-models = ["deep_weibull", "simple_model_one", "simple_model_two"]
-datasets = ["linear_weibull", "non_linear_weibull","metabric"]
+models = ["deep_weibull", "simple_model_one", "simple_model_two", "deep_hit", "deep_hit_zero_alpha"]
+datasets = ["linear_weibull", "non_linear_weibull"]
 
-performance_df = pd.DataFrame(list(product(models, datasets)), columns=['model', 'dataset'])
+performance_df = pd.DataFrame(list(product(datasets, models)), columns=['dataset', 'model'])
 c_index = []
 int_brier_score = []
 
-for model_name in models:
-    for dataset_name in datasets:
+for dataset_name in datasets:
+    for model_name in models:
+        
         results_path = "predict_results/" + model_name + "_~_" + dataset_name + "_results.csv"
         test_result = pd.read_csv(results_path)
         
-        # time-dependent concordance index
-        c = time_dependent_concordance(test_result)
-        c_index.append(c)
+        if model_name in ["deep_hit_zero_alpha", "deep_hit"]:
 
-        # integrated brier score
-        b = integrated_brier(test_result)
-        int_brier_score.append(b)
+            c = c_td_deep_hit(test_result) # compute c-index
+            c_index.append(c) # add to list of results
+
+            int_brier_object = int_brier_deep_hit(test_result) # compute integrated Brier score (plus the (t, BS(t)) values)
+            int_brier_score.append(int_brier_object["int_brier"]) # add integrated Brier score to list of results
+
+            # make plot of (t,BS(t)) here...
+
+        else:
+
+            int_brier_object = int_brier_weibull(test_result) # compute integrated Brier score (plus the (t, BS(t)) values)
+            int_brier_score.append(int_brier_object["int_brier"]) # add integrated Brier score to list of results
+
+            c = c_td_weibull(test_result) # compute c-index
+            c_index.append(c) # add to list of results
+
+            # make plot of (t,BS(t)) here...
 
 performance_df["c_index"] = c_index
 performance_df["int_brier_score"] = int_brier_score
+
+performance_df.to_csv("performance_results.csv", index=False)
 
 print(performance_df)
 

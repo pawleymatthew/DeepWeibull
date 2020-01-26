@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import random
+import math
 from make_train_test import make_train_test
 
 """
@@ -46,8 +47,8 @@ def linear_weibull_data(N, N_c, theta_a, theta_b):
 Simulate the data and write to a csv file.
 """
 
-N = 30000 # number of individuals
-N_c = 5000 # number of censored individuals
+N = 3000 # number of individuals
+N_c = math.floor(0.25*N) # number of censored individuals (N_c = censoring fraction * N)
 theta_a = [50, 8, -8, 0, 0] # alpha regression parameters
 theta_b = [1.1, 0.1, 0, -0.1, 0] # beta regression parameters
 

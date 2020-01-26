@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import random
+import math
 
 from make_train_test import make_train_test
 
@@ -42,9 +43,8 @@ def non_linear_weibull_data(N, N_c):
 """
 Simulate the data and write to a csv file.
 """
-# set inputs
-N = 30000
-N_c = 5000
+N = 3000 # number of individuals
+N_c = math.floor(0.25*N) # number of censored individuals (N_c = censoring fraction * N)
 
 # create dataframe
 df = non_linear_weibull_data(N, N_c)
@@ -57,8 +57,6 @@ Split into training and test sets and write these to csv files.
 """
 
 train_frac = 0.9
-
-# make the train/test sets
 sets = make_train_test(df, train_frac)
 
 # write to csv files
