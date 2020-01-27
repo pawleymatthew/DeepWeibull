@@ -43,8 +43,8 @@ def non_linear_weibull_data(N, N_c):
 """
 Simulate the data and write to a csv file.
 """
-N = 3000 # number of individuals
-N_c = math.floor(0.25*N) # number of censored individuals (N_c = censoring fraction * N)
+N = 20000 # number of individuals
+N_c = math.floor(0.2*N) # number of censored individuals (N_c = censoring fraction * N)
 
 # create dataframe
 df = non_linear_weibull_data(N, N_c)
@@ -56,7 +56,7 @@ df.to_csv(r"datasets/non_linear_weibull_data/non_linear_weibull_df.csv", index=F
 Split into training and test sets and write these to csv files.
 """
 
-train_frac = 0.9
+train_frac = 0.6
 sets = make_train_test(df, train_frac)
 
 # write to csv files

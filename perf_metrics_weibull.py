@@ -2,13 +2,45 @@ import numpy as np
 import pandas as pd
 
 from scipy.integrate import simps
+from lifelines import KaplanMeierFitter
 
 from weibull_dist import weibull_survival, weibull_int_hazard
 
 
-"""
-TO DO: ADD CENSORING DISTRIBUTION TO THE PERFORMANCE METRICS SO THEY ARE COMPARABLE WITH THE DEEP HIT ONES!!!!
-"""
+def fit_censoring_distribution(time, status):
+
+    """
+    DESCRIPTION: 
+        Fits the function G(t), the "survival distribution of the censoring mechanism" by fitting a Kaplan-Meier survival curve.
+    INPUT:
+        - time : the time column of a test_result dataframe
+        - status : the status column of a test_result dataframe
+    OUTPUT:
+        - G : an (N,2) array of (t, S(t)) where S is the estimated survival function of the censoring distribution.  
+    """
+
+    kmf = KaplanMeierFitter()
+    kmf.fit(time, event_observed=(status==0).astype(int))
+    G = np.array(kmf.survival_function_.reset_index())
+
+    return G
+
+def eval_censoring_distribution(G,t):
+
+    """
+    DESCRIPTION: 
+        Evaluates the function G(t) for a given t.
+    INPUT:
+        - G : the fitted survival function of the censoring distribution, as in output of fit_censoring_distribution()
+        - t : the time at which to evaluate G
+    OUTPUT:
+        - Gt : G(t)  
+    """
+
+    Gt_idx = np.where(t >= G[:,0])[0].max() #
+    Gt = G[Gt_idx,1]
+
+    return Gt
 
 
 def c_td_weibull(test_result):
@@ -80,13 +112,21 @@ def brier_weibull(test_result, t):
     b = 0 # initialise Brier score
     N = test_result.shape[0] # number of individuals
 
+    # fit the KM estimate of survival curve of censoring distribution
+    G = fit_censoring_distribution(test_result["time"],test_result["status"])
+    # evaluate and store G(t) 
+    Gt = eval_censoring_distribution(G,t)
+
     for i in range(N): # for each individual i
         row_i = test_result.index[i] # store index of individual i
+        t_i = test_result.at[row_i,"time"] # store event/censoring time of individual i
         # compute S(t_i|x_i)
-        S_i = weibull_survival(test_result.at[row_i,"time"], test_result.at[row_i,"pred_alpha"], test_result.at[row_i,"pred_beta"]) 
+        S_i = weibull_survival(t_i, test_result.at[row_i,"pred_alpha"], test_result.at[row_i,"pred_beta"]) 
+        # compute G(t_i)
+        Gt_i = eval_censoring_distribution(G,t_i)
         # add contribution to Brier score
-        b += S_i**2 * test_result.at[row_i,"dead_by_t"] 
-        b += (1-S_i)**2 * test_result.at[row_i,"survive_t"] 
+        b += S_i**2 * test_result.at[row_i,"dead_by_t"] / Gt_i
+        b += (1-S_i)**2 * test_result.at[row_i,"survive_t"] / Gt
  
     b /= N # divide b by N
     

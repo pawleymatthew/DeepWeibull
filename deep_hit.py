@@ -13,7 +13,7 @@ from sklearn_pandas import DataFrameMapper
 from make_train_test import make_train_test
 
 
-def deep_hit(train_df, test_df, learn_rate=0.01, epochs=150, batch_size=128, alpha=1, sigma=0.2):
+def deep_hit(train_df, test_df, learn_rate=0.01, epochs=100, batch_size=256, alpha=0.2, sigma=0.1):
 
     """
     DESCRIPTION:
@@ -73,7 +73,7 @@ def deep_hit(train_df, test_df, learn_rate=0.01, epochs=150, batch_size=128, alp
     p = train_x.shape[1] # number of covariates
     in_features = p # number of input nodes = number of covariates
     out_features = labtrans.out_features # equals num_durations 
-    num_nodes = [3*p, 5*p, 3*p] # layer wdiths as stated in DeepHit paper
+    num_nodes = [min(32,3*p), min(32,5*p), min(32,3*p)] # layer wdiths as stated in DeepHit paper
     net = tt.practical.MLPVanilla(in_features, num_nodes, out_features, batch_norm=True, dropout=0.1)
 
     """
@@ -108,7 +108,7 @@ def deep_hit(train_df, test_df, learn_rate=0.01, epochs=150, batch_size=128, alp
         "test_result" : test_result})
 
 
-def deep_hit_zero_alpha(train_df, test_df, learn_rate=0.01, epochs=150, batch_size=128):
+def deep_hit_zero_alpha(train_df, test_df, learn_rate=0.02, epochs=100, batch_size=32):
 
     """
     DESCRIPTION:

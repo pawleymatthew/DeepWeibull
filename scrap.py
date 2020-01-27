@@ -7,6 +7,7 @@ from perf_metrics_deephit import deep_hit_metrics_preprocess, int_brier_deep_hit
 results_path = "predict_results/" + "deep_hit" + "_~_" + "non_linear_weibull" + "_results.csv"
 test_result = pd.read_csv(results_path)
 
+"""
 print(test_result.head)
 print(test_result["time"])
 
@@ -25,6 +26,8 @@ T_max = test_result["time"].max()
 
 int_briers = deep_hit_eval_surv.integrated_brier_score(np.linspace(T_min,T_max,num=20))
 print(int_briers)
+"""
 
+print(min(1,2))
 
 

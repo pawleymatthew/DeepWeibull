@@ -47,8 +47,8 @@ def linear_weibull_data(N, N_c, theta_a, theta_b):
 Simulate the data and write to a csv file.
 """
 
-N = 3000 # number of individuals
-N_c = math.floor(0.25*N) # number of censored individuals (N_c = censoring fraction * N)
+N = 20000 # number of individuals
+N_c = math.floor(0.2*N) # number of censored individuals (N_c = censoring fraction * N)
 theta_a = [50, 8, -8, 0, 0] # alpha regression parameters
 theta_b = [1.1, 0.1, 0, -0.1, 0] # beta regression parameters
 
@@ -62,7 +62,7 @@ df.to_csv(r"datasets/linear_weibull_data/linear_weibull_df.csv", index=False)
 Split into training and test sets and write these to csv files.
 """
 
-train_frac = 0.9
+train_frac = 0.6
 sets = make_train_test(df, train_frac)
 
 # write to csv files
