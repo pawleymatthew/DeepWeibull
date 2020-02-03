@@ -6,8 +6,8 @@ from itertools import product
 from perf_metrics_weibull import c_td_weibull, int_brier_weibull
 from perf_metrics_deephit import c_td_deep_hit, int_brier_deep_hit
 
-models = ["simple_model_one", "simple_model_two", "deep_weibull", "deep_hit", "deep_hit_zero_alpha"]
-datasets = ["linear_weibull","non_linear_weibull"]
+models = ["simple_model_one","simple_model_two","deep_hit_zero_alpha","deep_hit","deep_weibull"]
+datasets = ["linear_weibull"]
 
 
 performance_df = pd.DataFrame(list(product(datasets, models)), columns=['dataset', 'model'])

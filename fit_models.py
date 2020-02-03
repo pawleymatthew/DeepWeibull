@@ -38,16 +38,9 @@ def run_model(model_name, dataset_name):
 Repeat for all models and datasets
 """
 
-models = ["simple_model_one", "simple_model_two", "deep_weibull", "deep_hit", "deep_hit_zero_alpha"]
-datasets = ["linear_weibull", "non_linear_weibull","metabric"]
-
-models = ["deep_weibull"]
-datasets = ["linear_weibull", "non_linear_weibull"]
+models = ["simple_model_one","simple_model_two","deep_hit_zero_alpha","deep_hit","deep_weibull"]
+datasets = ["linear_weibull"]
 
 for model_name in models:
     for dataset_name in datasets:
         run_model(model_name, dataset_name)
-
-"""
-Before running compare_performance.py, check that DeepWeibull has worked on METABRIC.
-"""

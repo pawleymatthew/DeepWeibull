@@ -1,42 +1,47 @@
 import numpy as np
 import pandas as pd
 import math
+import matplotlib.pyplot as plt
+
 import torch
 import torchtuples as tt
+
+from sklearn_pandas import DataFrameMapper 
 
 from pycox.models import DeepHitSingle
 from pycox.evaluation import EvalSurv
 
-from sklearn.preprocessing import StandardScaler
-from sklearn_pandas import DataFrameMapper
+from data import make_train_test
 
-from make_train_test import make_train_test
+"""
+To implement the DeepHit model, I follow the approach described here:
+    https://github.com/havakv/pycox/blob/master/examples/deephit.ipynb
+"""
 
 
-def deep_hit(train_df, test_df, learn_rate=0.01, epochs=100, batch_size=256, alpha=0.2, sigma=0.1):
-
-    """
-    DESCRIPTION:
-        Runs the DeepHit model (with K=1, single event).
-    INPUT:
-        - train_df : Pandas dataframe
-        - test_df : Pandas dataframe
-        - num_nodes : list of layer widths (length of list is number of hidden layers)
-        - learn_rate: the learning rate of the optimisation procedure
-        - epochs :
-        - batch_size :
-        - alpha : (>0) the hyperparameter in the total loss function (NB: as per DeepHit paper)
-        - sigma : (>0) hyperparameter of L_2 loss function
-    OUTPUT:
-        - model: the final compiled model
-        - training_history: a summary of the loss and validation loss at each epoch
-        - test_result: a Pandas dataframe with the outcome variables and corresponding predicted Weibull parameters.
-    """
+def deep_hit(dataset, alpha=0.3, lr=0.01, epochs=100):
 
     """
-    Make validation set, separate covariates and outcomes, then convert the covariates to float32
+    Paths to input and output files
+    """
+    train_path = "datasets/" + dataset + "_data/" + dataset + "_train_df.csv" # training set data
+    test_path = "datasets/" + dataset + "_data/" + dataset + "_test_df.csv" # test set data
+ 
+    lr_plot_path = "plots/deep_hit/learning_rate/" + dataset + ".png" # create plot of loss for different lr's
+    training_loss_plot_path = "plots/deep_hit/training_loss/" + dataset + ".png" # create plot of loss for different lr's
+
+    """
+    Read in the appropriate training and test sets.
     """
 
+    train_df = pd.read_csv(train_path)
+    test_df = pd.read_csv(test_path)
+
+    """
+    Data preprocessing: set up for DeepHitSingle
+    """
+
+    # split the training set into training and validation set
     sets = make_train_test(train_df, train_frac=0.2)
     train_df = sets["train_df"]
     val_df = sets["test_df"]
@@ -51,71 +56,93 @@ def deep_hit(train_df, test_df, learn_rate=0.01, epochs=100, batch_size=256, alp
     val_x = x_mapper.transform(val_df).astype('float32')
     test_x = x_mapper.transform(test_df).astype('float32')
 
-    """
-    DeepHit is a discrete-time model, so need to discretise the time points. 
-    Use partition {0,1,...,T_max} where T_max = ceiling of maximum event/censoring time in training set
-    """
-
-    num_durations = math.ceil(train_df["time"].max()) # ceiling of maximum event/censoring time in training set
+    # discretise time for DeepHit, using time index set {0,1,...,T_max}
+    num_durations = math.ceil(train_df["time"].max()) # largest survival time in training set set to be T_max 
     labtrans = DeepHitSingle.label_transform(num_durations, scheme='equidistant') # set up partition
     get_target = lambda df: (df['time'].values, df['status'].values) 
     train_y = labtrans.fit_transform(*get_target(train_df))
     val_y = labtrans.transform(*get_target(val_df))
-
     test_time, test_status = get_target(test_df)
 
     """
-    Define the DeepHit model. Since K=1 (single event) the architecture is very simple.
-    Model architecture is controlled by function inputs (e.g. layers, batch_norm, dropout, ...) 
+    Define the DeepHit network. Since K=1 (single event) the architecture is very simple.
+    Model architecture: layers and widths as stated in paper; use dropout probability 0.1 and batch normalisation 
     """
 
-    # use MLPVanilla from torchtuples
     p = train_x.shape[1] # number of covariates
     in_features = p # number of input nodes = number of covariates
     out_features = labtrans.out_features # equals num_durations 
-    num_nodes = [min(32,3*p), min(32,5*p), min(32,3*p)] # layer wdiths as stated in DeepHit paper
+    num_nodes = [3*p,5*p,3*p] # layer widths as stated in DeepHit paper
     net = tt.practical.MLPVanilla(in_features, num_nodes, out_features, batch_norm=True, dropout=0.1)
 
     """
     Set learning parameters and fit the model.
-    NB: alpha in DeepHitSingle() differs from DH paper: here 1=log-likelihood only, 0=concordance only
-    The alpha in my deep_hit() refers to alpha in the DeepHit paper (alpha >=0)
-    I tranform it here: alpha_{pycox} = 1/(1+alpha_{DH} < 1
+    NB: alpha in DeepHitSingle() differs from DH paper: alpha_{pycox} = 1/(1+alpha_{DH}
+    The deep_hit(..., alpha, ...) refers to alpha as in the Deep Hit paper.
     """
+
     alpha_pycox = 1/(1+alpha)
+    model = DeepHitSingle(net, tt.optim.Adam, alpha=alpha_pycox, sigma=0.2, duration_index=labtrans.cuts)
 
-    # define the model using previously defined net
-    model = DeepHitSingle(net, tt.optim.Adam, alpha=alpha_pycox, sigma=sigma, duration_index=labtrans.cuts)
+    """
+    Learning rate
+        - create plot of batch loss against learning rates
+        - set learning rate automatically or user input
+    """
 
-    model.optimizer.set_lr(learn_rate) # set learning rate
-    callbacks = [tt.callbacks.EarlyStopping()] # use early stopping
+    if lr=="auto":
 
-    # fit the model using the training set (with validation set)
-    training_history = model.fit(train_x, train_y, batch_size, epochs, callbacks, val_data=(val_x, val_y), verbose=0)
+        lr_finder = model.lr_finder(train_x, train_y, batch_size=256, tolerance=3, lr_range=(1e-7,1e1))
+        lr_finder.plot()
+        plt.xlim(1e-07, 1e0)
+        #plt.xlim((1e-7,1e0))
+        #plt.xlabel("Learning rate")
+        #plt.ylabel("Smoothed batch loss")
+        #plt.title('Optimising learning rate: '+ dataset)
+        plt.savefig(lr_plot_path)
+        #plt.clf()
+        best_lr = lr_finder.get_best_lr() # find lr with lowest batch loss
+        model.optimizer.set_lr(best_lr) # set as model lr
+
+    else: 
+        model.optimizer.set_lr(lr)
+
+    """
+    Train the model
+        - use early stopping
+        - plot the training and validation loss
+    """
+
+    callbacks = [tt.callbacks.EarlyStopping()]
+    batch_size=256
+    log = model.fit(train_x, train_y, batch_size, epochs, callbacks, val_data=(val_x, val_y))
+
+    log.plot()
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.title('Training loss: '+ dataset)
+    plt.legend()
+    plt.savefig(training_loss_plot_path)
+    plt.clf()
     
     """
-    Predict the survival curves for the test set individuals
+    Predict the survival curves for the test set 
     """
 
-    test_result = model.predict_surv_df(test_x)
-    test_result = test_result.transpose()
-    test_result["time"] = test_time # add the actual event/censoring time to the df
-    test_result["status"] = test_status # add the event indicator to the df
+    surv = model.predict_surv_df(test_x)
+    #test_result = test_result.transpose()
+    #test_result["time"] = test_time 
+    #test_result["status"] = test_status
+
+    """
+    Create evaluation object
+    """
+
+    ev = EvalSurv(surv, test_time, test_status, censor_surv='km')
+
+    return ({"test_result" : surv, "ev" : ev})
+
+fuck = deep_hit("rr_nl_nhp")
+
+
     
-    return ({
-        "model" : model,
-        "training_history" : training_history,
-        "test_result" : test_result})
-
-
-def deep_hit_zero_alpha(train_df, test_df, learn_rate=0.02, epochs=100, batch_size=32):
-
-    """
-    DESCRIPTION:
-        Runs the DeepHit model in deep_hit() (with K=1, single event) with alpha hyperparameter equal to 0.
-    """
-
-    # sigma hyperparameter doesn't get used when alpha=0, but must be positive in the function
-    epsilon = 1
-
-    return deep_hit(train_df, test_df, learn_rate=learn_rate, epochs=epochs, batch_size=batch_size, alpha=0.0, sigma=epsilon)

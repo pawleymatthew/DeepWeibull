@@ -1,5 +1,6 @@
 dataset,model,c_index,int_brier_score
-linear_weibull,simple_model_one,0.5104841402337229,0.45013235723449424
-linear_weibull,simple_model_two,0.529449081803005,0.4515791015499702
-non_linear_weibull,simple_model_one,0.5255115937722369,0.393282701509638
-non_linear_weibull,simple_model_two,0.5261564794806701,0.3930326059500172
+linear_weibull,simple_model_one,0.5853258597961568,
+linear_weibull,simple_model_two,0.6257837032591338,
+linear_weibull,deep_hit_zero_alpha,0.5506767980966059,0.1342199988731092
+linear_weibull,deep_hit,0.5873943005347938,0.11344893875528685
+linear_weibull,deep_weibull,0.369918655620693,

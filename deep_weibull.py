@@ -105,11 +105,11 @@ def deep_weibull(train_df, test_df, learn_rate=0.02, epochs=100, steps_per_epoch
     dropout_prob = 0.1
 
     model = Sequential()
-    model.add(Dense(min(32,2*p), input_dim=p, activation='relu'))
+    model.add(Dense(2*p, input_dim=p, activation='relu'))
     model.add(Dropout(dropout_prob))
-    model.add(Dense(min(32,2*p), activation='relu'))
+    model.add(Dense(2*p, activation='relu'))
     model.add(Dropout(dropout_prob))
-    model.add(Dense(min(32,p), activation='relu'))
+    model.add(Dense(p, activation='relu'))
     model.add(Dropout(dropout_prob))
     model.add(Dense(2)) # layer with 2 nodes (alpha and beta)
     model.add(Activation(weibull_activate)) # apply custom activation function (exp and softplus)
