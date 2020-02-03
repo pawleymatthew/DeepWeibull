@@ -13,7 +13,7 @@ models = ["regression_weibull", "deep_hit", "deep_hit_zero", "deep_weibull"]
 
 # For each dataset, run the models, compute the evaluation metrics, and create plots
 
-"""
+
 for dataset in datasets:
 
     # Run the models
@@ -22,9 +22,6 @@ for dataset in datasets:
     dh_zero = deep_hit(dataset, alpha=0.0, lr=0.01, epochs=50, batch_size=256)
     dw = deep_weibull(dataset, lr=0.01, epochs=50, steps_per_epoch=2)
 
-    # Compute the c-index
-    
-"""
 
 
 
