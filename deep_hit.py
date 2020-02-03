@@ -19,16 +19,15 @@ To implement the DeepHit model, I follow the approach described here:
 """
 
 
-def deep_hit(dataset, alpha=0.3, lr=0.01, epochs=100):
+def deep_hit(dataset, alpha=0.3, lr=0.01, epochs=50, batch_size=256):
 
     """
     Paths to input and output files
     """
     train_path = "datasets/" + dataset + "_data/" + dataset + "_train_df.csv" # training set data
     test_path = "datasets/" + dataset + "_data/" + dataset + "_test_df.csv" # test set data
- 
-    lr_plot_path = "plots/deep_hit/learning_rate/" + dataset + ".png" # create plot of loss for different lr's
-    training_loss_plot_path = "plots/deep_hit/training_loss/" + dataset + ".png" # create plot of loss for different lr's
+
+    training_loss_plot_path = "plots/deep_hit/training_loss/" + dataset + ".png" # create plot of training loss
 
     """
     Read in the appropriate training and test sets.
@@ -73,7 +72,7 @@ def deep_hit(dataset, alpha=0.3, lr=0.01, epochs=100):
     in_features = p # number of input nodes = number of covariates
     out_features = labtrans.out_features # equals num_durations 
     num_nodes = [3*p,5*p,3*p] # layer widths as stated in DeepHit paper
-    net = tt.practical.MLPVanilla(in_features, num_nodes, out_features, batch_norm=True, dropout=0.1)
+    net = tt.practical.MLPVanilla(in_features, num_nodes, out_features, batch_norm=True, dropout=0.2)
 
     """
     Set learning parameters and fit the model.
@@ -85,22 +84,12 @@ def deep_hit(dataset, alpha=0.3, lr=0.01, epochs=100):
     model = DeepHitSingle(net, tt.optim.Adam, alpha=alpha_pycox, sigma=0.2, duration_index=labtrans.cuts)
 
     """
-    Learning rate
-        - create plot of batch loss against learning rates
-        - set learning rate automatically or user input
+    Learning rate: set learning rate automatically or user input
     """
 
     if lr=="auto":
 
         lr_finder = model.lr_finder(train_x, train_y, batch_size=256, tolerance=3, lr_range=(1e-7,1e1))
-        lr_finder.plot()
-        plt.xlim(1e-07, 1e0)
-        #plt.xlim((1e-7,1e0))
-        #plt.xlabel("Learning rate")
-        #plt.ylabel("Smoothed batch loss")
-        #plt.title('Optimising learning rate: '+ dataset)
-        plt.savefig(lr_plot_path)
-        #plt.clf()
         best_lr = lr_finder.get_best_lr() # find lr with lowest batch loss
         model.optimizer.set_lr(best_lr) # set as model lr
 
@@ -108,20 +97,17 @@ def deep_hit(dataset, alpha=0.3, lr=0.01, epochs=100):
         model.optimizer.set_lr(lr)
 
     """
-    Train the model
-        - use early stopping
-        - plot the training and validation loss
+    Train the model (with early stopping) and plot the training and validation loss.
     """
 
     callbacks = [tt.callbacks.EarlyStopping()]
-    batch_size=256
     log = model.fit(train_x, train_y, batch_size, epochs, callbacks, val_data=(val_x, val_y))
 
     log.plot()
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.title('Training loss: '+ dataset)
-    plt.legend()
+    plt.title("Training loss: DeepHit ($\\alpha =$" + str(alpha) + ") on " + dataset)
+    plt.legend(['Train', 'Validation'])
     plt.savefig(training_loss_plot_path)
     plt.clf()
     
@@ -130,9 +116,6 @@ def deep_hit(dataset, alpha=0.3, lr=0.01, epochs=100):
     """
 
     surv = model.predict_surv_df(test_x)
-    #test_result = test_result.transpose()
-    #test_result["time"] = test_time 
-    #test_result["status"] = test_status
 
     """
     Create evaluation object
@@ -141,8 +124,3 @@ def deep_hit(dataset, alpha=0.3, lr=0.01, epochs=100):
     ev = EvalSurv(surv, test_time, test_status, censor_surv='km')
 
     return ({"test_result" : surv, "ev" : ev})
-
-fuck = deep_hit("rr_nl_nhp")
-
-
-    

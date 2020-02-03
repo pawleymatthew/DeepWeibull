@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import random
+import math
 
 from pycox.datasets import metabric, support, flchain, rr_nl_nhp
 
@@ -77,20 +78,20 @@ RR_NL_NHP
     - No columns need to be normalised.
     - Columns 'duration_true', 'event_true', 'censoring_true' contain extraneous intermediate information about the simulation.
     - Change ['duration', 'event'] -> ['time', 'status'].
-    - Train/test split of 80/20.
+    - Train/test split of 60/40.
 """
 
 df = rr_nl_nhp.read_df() # read in dataset
 df = df.drop(['duration_true', 'event_true', 'censoring_true'], axis=1) # remove extraneous cols
 df.rename(columns={"duration": "time", "event": "status"}, inplace=True) # rename duration/event cols
-sets = make_train_test(df, 0.8) # make train/test sets
+sets = make_train_test(df, 0.6) # make train/test sets
 
 df.to_csv(r"datasets/rr_nl_nhp_data/rr_nl_nhp_df.csv", index=False)
 sets["train_df"].to_csv(r"datasets/rr_nl_nhp_data/rr_nl_nhp_train_df.csv", index=False)
 sets["test_df"].to_csv(r"datasets/rr_nl_nhp_data/rr_nl_nhp_test_df.csv", index=False)
 
 """
-SYNTHETIC DATASET
+SMALL SYNTHETIC WEIBULL:
 
     - The data is generated as follows:
         - generate covariates 'x0', 'x1', 'x2' ~ N(0,1) independently
@@ -98,12 +99,13 @@ SYNTHETIC DATASET
         - randomly select individuals to be censored
         - if uncensored: let t=t_star. 
         - if censored: generate t~Uniform(0,t_star)
-    - Train/test split of 50/50.
+    - Training = 1000, Test = 10000
+    - Censoring fraction is 20%.
 """
 
 # set parameters
-N=3000 # total number of inds
-N_c=400 # number of censored inds
+N=11000 # total number of inds
+N_c=math.ceil(0.2*N) # number of censored inds
 theta_a=[60, 10, -10, 0] # alpha regression parameters
 theta_b=[1.2, 0.2, 0, -0.2] # beta regression parameters
 
@@ -127,8 +129,54 @@ time[censored] = np.random.uniform(low=0,high=time[censored]) # sample censoring
 df["time"] = time 
 df["status"] = status
 
-sets = make_train_test(df, 0.5) # make train/test sets
+sets = make_train_test(df, 1000/N) # make train/test sets
 
-df.to_csv(r"datasets/synthetic_weibull_data/synthetic_weibull_df.csv", index=False)
-sets["train_df"].to_csv(r"datasets/synthetic_weibull_data/synthetic_weibull_train_df.csv", index=False)
-sets["test_df"].to_csv(r"datasets/synthetic_weibull_data/synthetic_weibull_test_df.csv", index=False)
+df.to_csv(r"datasets/small_synthetic_weibull_data/small_synthetic_weibull_df.csv", index=False)
+sets["train_df"].to_csv(r"datasets/small_synthetic_weibull_data/small_synthetic_weibull_train_df.csv", index=False)
+sets["test_df"].to_csv(r"datasets/small_synthetic_weibull_data/small_synthetic_weibull_test_df.csv", index=False)
+
+
+"""
+LARGE SYNTHETIC WEIBULL:
+
+    - The data is generated as follows:
+        - generate covariates 'x0', 'x1', 'x2' ~ N(0,1) independently
+        - generate survival time from t_star = Weibull(alpha,beta) where alpha, beta are linear combinations of x's
+        - randomly select individuals to be censored
+        - if uncensored: let t=t_star. 
+        - if censored: generate t~Uniform(0,t_star)
+    - Training = 15000, Test = 10000
+    - Censoring fraction is 20%.
+"""
+
+# set parameters
+N=25000 # total number of inds
+N_c=math.ceil(0.2*N) # number of censored inds
+theta_a=[60, 10, -10, 0] # alpha regression parameters
+theta_b=[1.2, 0.2, 0, -0.2] # beta regression parameters
+
+
+# simulate covariates
+x = np.random.normal(loc=0.0, scale=1.0, size=(N,3))
+df = pd.DataFrame(x, columns=['x{}'.format(i) for i in range(0, 3)]) # make dataframe with colnames x0,x1,x2
+
+# compute Weibull parameters 
+alpha = theta_a[0] + x.dot(np.array(theta_a[1:]))
+beta = theta_b[0] + x.dot(np.array(theta_b[1:]))
+alpha = np.maximum(alpha, 0.01) # ensure >0
+beta = np.maximum(beta, 0.01) # ensure >0
+
+# simulate labels
+time = alpha * np.random.weibull(beta, size=N) # simulate the death times
+status = np.ones(N) # initialise status
+censored = random.sample(range(0,N), N_c) # randomly select inds to be censored
+status[censored] = 0 # modify status accordingly
+time[censored] = np.random.uniform(low=0,high=time[censored]) # sample censoring time using Uniform(0,t).
+df["time"] = time 
+df["status"] = status
+
+sets = make_train_test(df, 15000/N) # make train/test sets
+
+df.to_csv(r"datasets/big_synthetic_weibull_data/big_synthetic_weibull_df.csv", index=False)
+sets["train_df"].to_csv(r"datasets/big_synthetic_weibull_data/big_synthetic_weibull_train_df.csv", index=False)
+sets["test_df"].to_csv(r"datasets/big_synthetic_weibull_data/big_synthetic_weibull_test_df.csv", index=False)
