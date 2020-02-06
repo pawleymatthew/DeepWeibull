@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import math
 from deep_hit import deep_hit
 from deep_weibull import deep_weibull
@@ -18,7 +19,11 @@ print(b["scores"])
 print(b["int_score"])
 """
 
-t_vals =np.array([1,2,3,5.5])
-t_max = t_vals.max()
+datasets = ["small_synthetic_weibull", "metabric", "support"]
+models = ["regression_weibull", "deep_hit", "deep_hit_zero", "deep_weibull"]
 
-print(max(math.ceil(t_max),5))
+# For each dataset, run the models, compute the evaluation metrics, and create plots
+
+c_index_df = pd.DataFrame(columns=datasets, index=models)
+
+print(c_index_df)

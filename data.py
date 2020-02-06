@@ -36,7 +36,6 @@ For further details see the "pycox" documentation at https://github.com/havakv/p
 [2] Jared L. Katzman, Uri Shaham, Alexander Cloninger, Jonathan Bates, Tingting Jiang, and Yuval Kluger. Deepsurv: personalized treatment recommender system using a Cox proportional hazards deep neural network. BMC Medical Research Methodology, 18(1), 2018. 
 """
 
-
 """
 METABRIC
     - Columns 'x0', 'x1', 'x2', 'x3', 'x8' need to be normalised.
@@ -134,7 +133,6 @@ sets = make_train_test(df, 1000/N) # make train/test sets
 df.to_csv(r"datasets/small_synthetic_weibull_data/small_synthetic_weibull_df.csv", index=False)
 sets["train_df"].to_csv(r"datasets/small_synthetic_weibull_data/small_synthetic_weibull_train_df.csv", index=False)
 sets["test_df"].to_csv(r"datasets/small_synthetic_weibull_data/small_synthetic_weibull_test_df.csv", index=False)
-
 
 """
 LARGE SYNTHETIC WEIBULL:

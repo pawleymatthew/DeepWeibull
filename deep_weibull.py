@@ -157,3 +157,5 @@ def deep_weibull(dataset, lr=0.01, epochs=50, steps_per_epoch=2):
     ev = EvalSurv(surv, test_time, test_status, censor_surv='km')
 
     return ({"test_result" : test_result, "ev" : ev})
+
+go = deep_weibull("support")
