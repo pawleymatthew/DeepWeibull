@@ -18,6 +18,13 @@ To implement the DeepHit model, I follow the approach described here:
     https://github.com/havakv/pycox/blob/master/examples/deephit.ipynb
 """
 
+tidy_datasets = {
+  "small_synthetic_weibull": "Small Synthetic Weibull",
+  "big_synthetic_weibull": "Big Synthetic Weibull",
+  "metabric": "METABRIC",
+  "support": "SUPPORT",
+  "rr_nl_nhp": "RRNLNHP"
+}
 
 def deep_hit(dataset, alpha=0.3, lr=0.01, epochs=50, batch_size=256):
 
@@ -106,7 +113,7 @@ def deep_hit(dataset, alpha=0.3, lr=0.01, epochs=50, batch_size=256):
     log.plot()
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.title("Training loss: DeepHit ($\\alpha =$" + str(alpha) + ") on " + dataset)
+    plt.title("Training loss: DeepHit ($\\alpha =$" + str(alpha) + ") on " + tidy_datasets[dataset])
     plt.legend(['Train', 'Validation'])
     plt.savefig(training_loss_plot_path)
     plt.clf()

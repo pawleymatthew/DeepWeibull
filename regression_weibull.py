@@ -64,6 +64,10 @@ def regression_weibull(dataset):
     x = test_result.drop(["time", "status"], axis=1)
     test_result["pred_alpha"] = theta_a[0] + x.dot(np.array(theta_a[1:])) # alpha = theta_0 + < theta[1:p], x >
     test_result["pred_beta"] = theta_b[0] + x.dot(np.array(theta_b[1:])) # beta = phi_0 + < phi[1:p], x >
+    # if any of the predicted alpha/beta are negative, set equal to small eps
+    eps = 1e-8
+    test_result["pred_alpha"] = np.maximum(test_result["pred_alpha"], eps*np.ones(len(test_result["pred_alpha"])))
+    test_result["pred_beta"] = np.maximum(test_result["pred_beta"], eps*np.ones(len(test_result["pred_beta"])))
 
     """
     Create EvalSurv object

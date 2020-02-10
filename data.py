@@ -5,7 +5,7 @@ import math
 
 from pycox.datasets import metabric, support, flchain, rr_nl_nhp
 
-np.random.seed(1234)
+np.random.seed(10)
 
 """
 PREPROCESSING FUNCTIONS
@@ -14,7 +14,6 @@ PREPROCESSING FUNCTIONS
 def normalise(df, colnames):
     df[colnames] = df[colnames].apply(lambda x: (x-x.mean())/ x.std(), axis=0)
     return df
-
     
 def make_train_test(df, train_frac):
     train_df = df.groupby("status").apply(lambda x: x.sample(frac=train_frac)) # censoring frac. equal in train and test sets
@@ -22,7 +21,6 @@ def make_train_test(df, train_frac):
     train_df = train_df.sort_index()
     test_df = df.drop(train_df.index)
     return ({"train_df" : train_df, "test_df" : test_df})
-
 
 """
 I use one simulated and two real-world datasets from "pycox.datasets". 
@@ -53,6 +51,9 @@ df.to_csv(r"datasets/metabric_data/metabric_df.csv", index=False)
 sets["train_df"].to_csv(r"datasets/metabric_data/metabric_train_df.csv", index=False)
 sets["test_df"].to_csv(r"datasets/metabric_data/metabric_test_df.csv", index=False)
 
+print("METABRIC")
+print(df.describe())
+
 """
 SUPPORT
     - Columns 'x0', 'x7', 'x8', 'x9', 'x10', 'x11', 'x12', 'x13' need to be normalised.
@@ -66,11 +67,14 @@ df = support.read_df() # read in dataset
 df = normalise(df, ['x0', 'x7', 'x8', 'x9', 'x10', 'x11', 'x12', 'x13']) # normalise cols where appropriate
 df = df.drop(['x2', 'x3', 'x6'], axis=1)
 df.rename(columns={"duration": "time", "event": "status"}, inplace=True) # rename duration/event cols
-sets = make_train_test(df, 0.9) # make train/test sets
+sets = make_train_test(df, 0.8) # make train/test sets
 
 df.to_csv(r"datasets/support_data/support_df.csv", index=False)
 sets["train_df"].to_csv(r"datasets/support_data/support_train_df.csv", index=False)
 sets["test_df"].to_csv(r"datasets/support_data/support_test_df.csv", index=False)
+
+print("SUPPORT")
+print(df.describe())
 
 """
 RR_NL_NHP
@@ -88,6 +92,9 @@ sets = make_train_test(df, 0.6) # make train/test sets
 df.to_csv(r"datasets/rr_nl_nhp_data/rr_nl_nhp_df.csv", index=False)
 sets["train_df"].to_csv(r"datasets/rr_nl_nhp_data/rr_nl_nhp_train_df.csv", index=False)
 sets["test_df"].to_csv(r"datasets/rr_nl_nhp_data/rr_nl_nhp_test_df.csv", index=False)
+
+print("RRNLNHP")
+print(df.describe())
 
 """
 SMALL SYNTHETIC WEIBULL:
@@ -134,6 +141,9 @@ df.to_csv(r"datasets/small_synthetic_weibull_data/small_synthetic_weibull_df.csv
 sets["train_df"].to_csv(r"datasets/small_synthetic_weibull_data/small_synthetic_weibull_train_df.csv", index=False)
 sets["test_df"].to_csv(r"datasets/small_synthetic_weibull_data/small_synthetic_weibull_test_df.csv", index=False)
 
+print("Small Synthetic Weibull")
+print(df.describe())
+
 """
 LARGE SYNTHETIC WEIBULL:
 
@@ -152,7 +162,6 @@ N=25000 # total number of inds
 N_c=math.ceil(0.2*N) # number of censored inds
 theta_a=[60, 10, -10, 0] # alpha regression parameters
 theta_b=[1.2, 0.2, 0, -0.2] # beta regression parameters
-
 
 # simulate covariates
 x = np.random.normal(loc=0.0, scale=1.0, size=(N,3))
@@ -178,3 +187,6 @@ sets = make_train_test(df, 15000/N) # make train/test sets
 df.to_csv(r"datasets/big_synthetic_weibull_data/big_synthetic_weibull_df.csv", index=False)
 sets["train_df"].to_csv(r"datasets/big_synthetic_weibull_data/big_synthetic_weibull_train_df.csv", index=False)
 sets["test_df"].to_csv(r"datasets/big_synthetic_weibull_data/big_synthetic_weibull_test_df.csv", index=False)
+
+print("Big Synthetic Weibull")
+print(df.describe())

@@ -39,8 +39,15 @@ def weibull_activate(weibull_param):
     b = k.reshape(b, (k.shape(b)[0], 1))
     return k.concatenate((a, b), axis=1)
 
+tidy_datasets = {
+  "small_synthetic_weibull": "Small Synthetic Weibull",
+  "big_synthetic_weibull": "Big Synthetic Weibull",
+  "metabric": "METABRIC",
+  "support": "SUPPORT",
+  "rr_nl_nhp": "RRNLNHP"
+}
 
-def deep_weibull(dataset, lr=0.01, epochs=50, steps_per_epoch=2):
+def deep_weibull(dataset, lr=0.01, epochs=50, steps_per_epoch=5):
 
     """
     Paths to input and output files
@@ -91,15 +98,15 @@ def deep_weibull(dataset, lr=0.01, epochs=50, steps_per_epoch=2):
 
     model = Sequential()
 
-    model.add(Dense(2*p, input_dim=p, activation='relu'))
+    model.add(Dense(p, input_dim=p, activation='tanh'))
     model.add(BatchNormalization())
     model.add(Dropout(0.2))
 
-    model.add(Dense(2*p, activation='relu'))
+    model.add(Dense(p, activation='tanh'))
     model.add(BatchNormalization())
     model.add(Dropout(0.2))
 
-    model.add(Dense(p, activation='relu'))
+    model.add(Dense(p, activation='tanh'))
     model.add(BatchNormalization())
     model.add(Dropout(0.2))
     model.add(Dense(2)) # layer with 2 nodes (alpha and beta)
@@ -118,13 +125,13 @@ def deep_weibull(dataset, lr=0.01, epochs=50, steps_per_epoch=2):
     """
 
     callbacks = [] # use [EarlyStopping()] if desired
-    log = model.fit(train_x, train_y, epochs=epochs, steps_per_epoch=steps_per_epoch, validation_data=(val_x, val_y), callbacks=callbacks, validation_steps=5, verbose=1)
+    log = model.fit(train_x, train_y, epochs=epochs, steps_per_epoch=steps_per_epoch, validation_data=(val_x, val_y), callbacks=callbacks, validation_steps=5, verbose=2)
 
     plt.plot(log.history['loss'])
     plt.plot(log.history['val_loss'])
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.title('Training loss: DeepWeibull on '+ dataset)
+    plt.title('Training loss: DeepWeibull on '+ tidy_datasets[dataset])
     plt.legend(['Train', 'Validation'])
     plt.savefig(training_loss_plot_path)
     plt.clf()
@@ -157,5 +164,3 @@ def deep_weibull(dataset, lr=0.01, epochs=50, steps_per_epoch=2):
     ev = EvalSurv(surv, test_time, test_status, censor_surv='km')
 
     return ({"test_result" : test_result, "ev" : ev})
-
-go = deep_weibull("support")

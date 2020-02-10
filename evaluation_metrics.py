@@ -1,5 +1,8 @@
 import numpy as np
 import pandas as pd
+import matplotlib as plt
+
+from deep_hit import deep_hit
 
 from pycox.evaluation import EvalSurv
 
