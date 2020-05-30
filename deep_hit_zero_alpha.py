@@ -17,26 +17,29 @@ from data import make_train_test
 To implement the DeepHit model, I follow the approach described here:
     https://github.com/havakv/pycox/blob/master/examples/deephit.ipynb
 """
+
 tidy_datasets = {
-  "small_synthetic_weibull": "Small Synthetic Weibull",
-  "big_synthetic_weibull": "Big Synthetic Weibull",
+  "small_linear_weibull": "Small Linnear Weibull",
+  "big_linear_weibull": "Large Linear Weibull",
+  "small_nonlinear_weibull": "Small Linear Weibull",
+  "big_nonlinear_weibull": "Large Non-Linear Weibull",
   "metabric": "METABRIC",
   "support": "SUPPORT",
-  "rr_nl_nhp": "RRNLNHP"
+  "rrnlnph": "RRNLNPH"
 }
 
-def deep_hit_zero_alpha(dataset, alpha=0.0, lr=0.01, epochs=50, batch_size=256):
+def deep_hit_zero_alpha(dataset, split, lr=10e-3, epochs=50, batch_size=100):
 
     """
     Paths to input and output files
     """
-    train_path = "datasets/" + dataset + "_data/" + dataset + "_train_df.csv" # training set data
-    test_path = "datasets/" + dataset + "_data/" + dataset + "_test_df.csv" # test set data
-
-    training_loss_plot_path = "plots/deep_hit_zero_alpha/training_loss/" + dataset + ".png" # create plot of training loss
+    train_path = "datasets/" + dataset + "/train_" + str(split) + ".csv" # training set data
+    test_path = "datasets/" + dataset + "/test_" + str(split) + ".csv" # test set data
+ 
+    training_loss_plot_path = "plots/deep_hit_zero_alpha/training_loss/" + dataset + "_" + str(split) + ".pdf" # create plot of loss for different lr's
 
     """
-    Read in the appropriate training and test sets.
+    Read in the appropriate training and test sets (dataset name and split index)
     """
 
     train_df = pd.read_csv(train_path)
@@ -47,9 +50,11 @@ def deep_hit_zero_alpha(dataset, alpha=0.0, lr=0.01, epochs=50, batch_size=256):
     """
 
     # split the training set into training and validation set
-    sets = make_train_test(train_df, train_frac=0.2)
-    train_df = sets["train_df"]
-    val_df = sets["test_df"]
+    df = train_df.copy()
+    train_df = df.groupby("status").apply(lambda x: x.sample(frac=0.8)) # censoring frac. equal in train and test sets
+    train_df = train_df.reset_index(level="status", drop=True)
+    train_df = train_df.sort_index()
+    val_df = df.drop(train_df.index)
 
     # convert x values to float32 (needed for PyTorch)
     x_cols = list(train_df)
@@ -77,45 +82,35 @@ def deep_hit_zero_alpha(dataset, alpha=0.0, lr=0.01, epochs=50, batch_size=256):
     p = train_x.shape[1] # number of covariates
     in_features = p # number of input nodes = number of covariates
     out_features = labtrans.out_features # equals num_durations 
-    num_nodes = [3*p,5*p,3*p] # layer widths as stated in DeepHit paper
-    net = tt.practical.MLPVanilla(in_features, num_nodes, out_features, batch_norm=True, dropout=0.2)
+    nodes_1 = 3*p
+    nodes_2 = 5*p
+    nodes_3 = 3*p
+    num_nodes = [nodes_1,nodes_2,nodes_3] # layer widths as stated in DeepHit paper
+    net = tt.practical.MLPVanilla(in_features, num_nodes, out_features, batch_norm=False, dropout=0.25)
 
     """
     Set learning parameters and fit the model.
-    NB: alpha in DeepHitSingle() differs from DH paper: alpha_{pycox} = 1/(1+alpha_{DH}
-    The deep_hit(..., alpha, ...) refers to alpha as in the Deep Hit paper.
+    NB: alpha in DeepHitSingle() differs from DH paper: alpha_{pycox} = 1/(1+alpha_{DH}. Therefore alpha_{pycox}=1 is pure log-lkhd loss.
+    The hyperparameter sigma is now redundant - set equal to arbitrary number (has to be positive for DeepHitSingle())
     """
 
-    alpha_pycox = 1/(1+alpha)
-    model = DeepHitSingle(net, tt.optim.Adam, alpha=alpha_pycox, sigma=0.2, duration_index=labtrans.cuts)
-
-    """
-    Learning rate: set learning rate automatically or user input
-    """
-
-    if lr=="auto":
-
-        lr_finder = model.lr_finder(train_x, train_y, batch_size=256, tolerance=3, lr_range=(1e-7,1e1))
-        best_lr = lr_finder.get_best_lr() # find lr with lowest batch loss
-        model.optimizer.set_lr(best_lr) # set as model lr
-
-    else: 
-        model.optimizer.set_lr(lr)
+    model = DeepHitSingle(net, tt.optim.Adam, alpha=1, sigma=1, duration_index=labtrans.cuts)
 
     """
     Train the model (with early stopping) and plot the training and validation loss.
     """
-
+    model.optimizer.set_lr(lr)
     callbacks = [tt.callbacks.EarlyStopping()]
     log = model.fit(train_x, train_y, batch_size, epochs, callbacks, val_data=(val_x, val_y))
 
     log.plot()
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.title("Training loss: DeepHit ($\\alpha =0$) on " + tidy_datasets[dataset])
+    plt.title("Training loss: DeepHit ($\\alpha =0$) on " + tidy_datasets[dataset] + " (Split " + str(split) + ")")
     plt.legend(['Train', 'Validation'])
     plt.savefig(training_loss_plot_path)
     plt.clf()
+    plt.close('all')
     
     """
     Predict the survival curves for the test set 

@@ -9,3 +9,4 @@ def weibull_surv(t, alpha, beta):
         S[:,i] = np.exp(-np.power(np.divide(t, alpha[i]), beta[i]))
 
     return S
+

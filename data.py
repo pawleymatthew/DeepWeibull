@@ -2,10 +2,7 @@ import pandas as pd
 import numpy as np
 import random
 import math
-
-from pycox.datasets import metabric, support, flchain, rr_nl_nhp
-
-np.random.seed(10)
+from pycox.datasets import metabric, support, rr_nl_nhp
 
 """
 PREPROCESSING FUNCTIONS
@@ -15,12 +12,30 @@ def normalise(df, colnames):
     df[colnames] = df[colnames].apply(lambda x: (x-x.mean())/ x.std(), axis=0)
     return df
     
-def make_train_test(df, train_frac):
-    train_df = df.groupby("status").apply(lambda x: x.sample(frac=train_frac)) # censoring frac. equal in train and test sets
-    train_df = train_df.reset_index(level="status", drop=True)
-    train_df = train_df.sort_index()
-    test_df = df.drop(train_df.index)
-    return ({"train_df" : train_df, "test_df" : test_df})
+def make_train_test(df, train_frac, dataset, n_splits=3):
+
+    full_file_path = "datasets/" + dataset + "/full.csv"
+    df.to_csv(full_file_path, index=False)
+    
+    for i in range(1, n_splits+1):
+
+        # set seed equal to loop index
+        random.seed(123*i)
+
+        # set output file paths
+        train_file_path = "datasets/" + dataset + "/train_" + str(i) + ".csv"
+        test_file_path = "datasets/" + dataset + "/test_" + str(i) + ".csv"
+
+        # create splits (different each time - sample depends on seed)
+        train_df = df.groupby("status").apply(lambda x: x.sample(frac=train_frac)) # censoring frac. equal in train and test sets
+        train_df = train_df.reset_index(level="status", drop=True)
+        train_df = train_df.sort_index()
+        test_df = df.drop(train_df.index)
+
+        # save the resulting file
+        train_df.to_csv(train_file_path, index=False)
+        test_df.to_csv(test_file_path, index=False)
+
 
 """
 I use one simulated and two real-world datasets from "pycox.datasets". 
@@ -45,14 +60,7 @@ METABRIC
 df = metabric.read_df() # read in dataset
 df = normalise(df, ['x0', 'x1', 'x2', 'x3', 'x8']) # normalise cols where appropriate
 df.rename(columns={"duration": "time", "event": "status"}, inplace=True) # rename duration/event cols
-sets = make_train_test(df, 0.8) # make train/test sets
-
-df.to_csv(r"datasets/metabric_data/metabric_df.csv", index=False)
-sets["train_df"].to_csv(r"datasets/metabric_data/metabric_train_df.csv", index=False)
-sets["test_df"].to_csv(r"datasets/metabric_data/metabric_test_df.csv", index=False)
-
-print("METABRIC")
-print(df.describe())
+make_train_test(df, train_frac=0.8, dataset="metabric", n_splits=3) # make train/test splits
 
 """
 SUPPORT
@@ -67,64 +75,50 @@ df = support.read_df() # read in dataset
 df = normalise(df, ['x0', 'x7', 'x8', 'x9', 'x10', 'x11', 'x12', 'x13']) # normalise cols where appropriate
 df = df.drop(['x2', 'x3', 'x6'], axis=1)
 df.rename(columns={"duration": "time", "event": "status"}, inplace=True) # rename duration/event cols
-sets = make_train_test(df, 0.8) # make train/test sets
-
-df.to_csv(r"datasets/support_data/support_df.csv", index=False)
-sets["train_df"].to_csv(r"datasets/support_data/support_train_df.csv", index=False)
-sets["test_df"].to_csv(r"datasets/support_data/support_test_df.csv", index=False)
-
-print("SUPPORT")
-print(df.describe())
+make_train_test(df, train_frac=0.8, dataset="support", n_splits=3) # make train/test splits
 
 """
-RR_NL_NHP
+RRNLNPH
     - No columns need to be normalised.
     - Columns 'duration_true', 'event_true', 'censoring_true' contain extraneous intermediate information about the simulation.
     - Change ['duration', 'event'] -> ['time', 'status'].
     - Train/test split of 60/40.
 """
 
-df = rr_nl_nhp.read_df() # read in dataset
+df = rr_nl_nhp.read_df() # read in dataset (note name sic)
 df = df.drop(['duration_true', 'event_true', 'censoring_true'], axis=1) # remove extraneous cols
 df.rename(columns={"duration": "time", "event": "status"}, inplace=True) # rename duration/event cols
-sets = make_train_test(df, 0.6) # make train/test sets
-
-df.to_csv(r"datasets/rr_nl_nhp_data/rr_nl_nhp_df.csv", index=False)
-sets["train_df"].to_csv(r"datasets/rr_nl_nhp_data/rr_nl_nhp_train_df.csv", index=False)
-sets["test_df"].to_csv(r"datasets/rr_nl_nhp_data/rr_nl_nhp_test_df.csv", index=False)
-
-print("RRNLNHP")
-print(df.describe())
+make_train_test(df, train_frac=0.6, dataset="rrnlnph", n_splits=3) # make train/test splits
 
 """
-SMALL SYNTHETIC WEIBULL:
+LINEAR WEIBULL:
 
     - The data is generated as follows:
-        - generate covariates 'x0', 'x1', 'x2' ~ N(0,1) independently
+        - generate covariates 'x0', 'x1', ... 'x4' ~ N(0,1) independently
         - generate survival time from t_star = Weibull(alpha,beta) where alpha, beta are linear combinations of x's
         - randomly select individuals to be censored
         - if uncensored: let t=t_star. 
         - if censored: generate t~Uniform(0,t_star)
-    - Training = 1000, Test = 10000
     - Censoring fraction is 20%.
+    - SMALL : Training = 300, Test = 39700
+    - BIG : Training = 30000, Test = 10000
 """
 
-# set parameters
-N=11000 # total number of inds
-N_c=math.ceil(0.2*N) # number of censored inds
-theta_a=[60, 10, -10, 0] # alpha regression parameters
-theta_b=[1.2, 0.2, 0, -0.2] # beta regression parameters
+random.seed(1234)
 
+# set parameters
+N=40000 # total number of inds
+N_c=math.ceil(0.2*N) # number of censored inds
+theta=[50, 25, -25, 0, 0, 0] # alpha regression parameters
 
 # simulate covariates
-x = np.random.normal(loc=0.0, scale=1.0, size=(N,3))
-df = pd.DataFrame(x, columns=['x{}'.format(i) for i in range(0, 3)]) # make dataframe with colnames x0,x1,x2
+x = np.random.uniform(low=-1.0, high=1.0, size=(N,5))
+df = pd.DataFrame(x, columns=['x{}'.format(i) for i in range(0, 5)]) # make dataframe with colnames x0,x1,x2,x3,x4
 
 # compute Weibull parameters 
-alpha = theta_a[0] + x.dot(np.array(theta_a[1:]))
-beta = theta_b[0] + x.dot(np.array(theta_b[1:]))
-alpha = np.maximum(alpha, 0.01) # ensure >0
-beta = np.maximum(beta, 0.01) # ensure >0
+alpha = theta[0] + x.dot(np.array(theta[1:]))
+beta = [1.0]
+alpha = np.maximum(alpha, 0.01) # ensure alpha>0 (very low prob it is <0).
 
 # simulate labels
 time = alpha * np.random.weibull(beta, size=N) # simulate the death times
@@ -134,44 +128,46 @@ status[censored] = 0 # modify status accordingly
 time[censored] = np.random.uniform(low=0,high=time[censored]) # sample censoring time using Uniform(0,t).
 df["time"] = time 
 df["status"] = status
+df.loc[df['time'] > 500, 'status'] = 1
+df.loc[df['time'] > 500, 'time'] = 500
 
-sets = make_train_test(df, 1000/N) # make train/test sets
+# create BIG datasets (train and test splits)
+make_train_test(df, train_frac=30000/N, dataset="big_linear_weibull", n_splits=3) # make train/test splits
 
-df.to_csv(r"datasets/small_synthetic_weibull_data/small_synthetic_weibull_df.csv", index=False)
-sets["train_df"].to_csv(r"datasets/small_synthetic_weibull_data/small_synthetic_weibull_train_df.csv", index=False)
-sets["test_df"].to_csv(r"datasets/small_synthetic_weibull_data/small_synthetic_weibull_test_df.csv", index=False)
+# create SMALL datasets (train and test splits)
+#df.groupby("status").apply(lambda y: y.sample(frac=10300/N)) # censoring frac. equal in small and big sets
+make_train_test(df, train_frac=300/N, dataset="small_linear_weibull", n_splits=3) # make train/test splits
 
-print("Small Synthetic Weibull")
-print(df.describe())
 
 """
-LARGE SYNTHETIC WEIBULL:
+NON-LINEAR WEIBULL:
 
     - The data is generated as follows:
-        - generate covariates 'x0', 'x1', 'x2' ~ N(0,1) independently
+        - generate covariates 'x0', 'x1', ... 'x4' ~ N(0,1) independently
         - generate survival time from t_star = Weibull(alpha,beta) where alpha, beta are linear combinations of x's
         - randomly select individuals to be censored
         - if uncensored: let t=t_star. 
         - if censored: generate t~Uniform(0,t_star)
-    - Training = 15000, Test = 10000
     - Censoring fraction is 20%.
+    - SMALL : Training = 300, Test = 39700
+    - BIG : Training = 30000, Test = 10000
 """
 
+random.seed(1234)
+
 # set parameters
-N=25000 # total number of inds
+N=40000 # total number of inds
 N_c=math.ceil(0.2*N) # number of censored inds
-theta_a=[60, 10, -10, 0] # alpha regression parameters
-theta_b=[1.2, 0.2, 0, -0.2] # beta regression parameters
+fun = lambda x :  80 - 40*x[0]**2 + 30*x[0]*x[1]  # alpha as function of covaraties,
 
 # simulate covariates
-x = np.random.normal(loc=0.0, scale=1.0, size=(N,3))
-df = pd.DataFrame(x, columns=['x{}'.format(i) for i in range(0, 3)]) # make dataframe with colnames x0,x1,x2
+x = np.random.uniform(low=-1.0, high=1.0, size=(N,5))
+df = pd.DataFrame(x, columns=['x{}'.format(i) for i in range(0, 5)]) # make dataframe with colnames x0,x1,x2,x3,x4
 
 # compute Weibull parameters 
-alpha = theta_a[0] + x.dot(np.array(theta_a[1:]))
-beta = theta_b[0] + x.dot(np.array(theta_b[1:]))
-alpha = np.maximum(alpha, 0.01) # ensure >0
-beta = np.maximum(beta, 0.01) # ensure >0
+alpha = fun(np.transpose(x))
+beta = [1.1]
+alpha = np.maximum(alpha, 0.01) # ensure alpha>0 (very low prob it is <0).
 
 # simulate labels
 time = alpha * np.random.weibull(beta, size=N) # simulate the death times
@@ -181,12 +177,12 @@ status[censored] = 0 # modify status accordingly
 time[censored] = np.random.uniform(low=0,high=time[censored]) # sample censoring time using Uniform(0,t).
 df["time"] = time 
 df["status"] = status
+df.loc[df['time'] > 500, 'status'] = 1
+df.loc[df['time'] > 500, 'time'] = 500
 
-sets = make_train_test(df, 15000/N) # make train/test sets
+# create BIG datasets (train and test splits)
+make_train_test(df, train_frac=30000/N, dataset="big_nonlinear_weibull", n_splits=3) # make train/test splits
 
-df.to_csv(r"datasets/big_synthetic_weibull_data/big_synthetic_weibull_df.csv", index=False)
-sets["train_df"].to_csv(r"datasets/big_synthetic_weibull_data/big_synthetic_weibull_train_df.csv", index=False)
-sets["test_df"].to_csv(r"datasets/big_synthetic_weibull_data/big_synthetic_weibull_test_df.csv", index=False)
-
-print("Big Synthetic Weibull")
-print(df.describe())
+# create SMALL datasets (train and test splits)
+#df.groupby("status").apply(lambda x: x.sample(frac=10300/40000)) # censoring frac. equal in small and big sets
+make_train_test(df, train_frac=300/N, dataset="small_nonlinear_weibull", n_splits=3) # make train/test splits

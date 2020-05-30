@@ -11,12 +11,12 @@ def c_index(ev):
     return ev.concordance_td('antolini')
 
 
-def brier_score(ev, dataset, int_points=100):
+def brier_score(ev, dataset, split, int_points=100):
 
     """
     Get the test set.
     """
-    test_path = "datasets/" + dataset + "_data/" + dataset + "_test_df.csv" # test set data
+    test_path = "datasets/" + dataset + "/test_" + str(split) + ".csv" # test set data
     test_df = pd.read_csv(test_path)
 
     """

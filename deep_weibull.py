@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 
 from keras.models import Sequential
+from keras import initializers
 from keras.layers import Dense, LSTM, Activation, Masking, Dropout
 from keras.layers.normalization import BatchNormalization
 from keras.callbacks.callbacks import EarlyStopping
@@ -33,32 +34,35 @@ def deep_weibull_loss(y, weibull_param_pred, name=None):
 
 
 def weibull_activate(weibull_param):
-    a = k.exp(weibull_param[:, 0]) # exponential of alpha
+    a = k.exp(weibull_param[:, 0]) # exponential of alpha 
+    #a = k.softplus(weibull_param[:, 0]) # softplus of alpha
     b = k.softplus(weibull_param[:, 1]) # softplus of beta
     a = k.reshape(a, (k.shape(a)[0], 1))
     b = k.reshape(b, (k.shape(b)[0], 1))
     return k.concatenate((a, b), axis=1)
 
 tidy_datasets = {
-  "small_synthetic_weibull": "Small Synthetic Weibull",
-  "big_synthetic_weibull": "Big Synthetic Weibull",
+  "small_linear_weibull": "Small Linnear Weibull",
+  "big_linear_weibull": "Large Linear Weibull",
+  "small_nonlinear_weibull": "Small Linear Weibull",
+  "big_nonlinear_weibull": "Large Non-Linear Weibull",
   "metabric": "METABRIC",
   "support": "SUPPORT",
-  "rr_nl_nhp": "RRNLNHP"
+  "rrnlnph": "RRNLNPH"
 }
 
-def deep_weibull(dataset, lr=0.01, epochs=50, steps_per_epoch=5):
+def deep_weibull(dataset, split, lr=10e-4, epochs=75, steps_per_epoch=25):
 
     """
     Paths to input and output files
     """
-    train_path = "datasets/" + dataset + "_data/" + dataset + "_train_df.csv" # training set data
-    test_path = "datasets/" + dataset + "_data/" + dataset + "_test_df.csv" # test set data
+    train_path = "datasets/" + dataset + "/train_" + str(split) + ".csv" # training set data
+    test_path = "datasets/" + dataset + "/test_" + str(split) + ".csv" # test set data
  
-    training_loss_plot_path = "plots/deep_weibull/training_loss/" + dataset + ".png" # create plot of loss for different lr's
+    training_loss_plot_path = "plots/deep_weibull/training_loss/" + dataset + "_" + str(split) + ".pdf" # create plot of loss for different lr's
 
     """
-    Read in the appropriate training and test sets.
+    Read in the appropriate training and test sets (dataset name and split index)
     """
 
     train_df = pd.read_csv(train_path)
@@ -69,9 +73,11 @@ def deep_weibull(dataset, lr=0.01, epochs=50, steps_per_epoch=5):
     """
 
     # split the training set into training and validation set
-    sets = make_train_test(train_df, train_frac=0.2)
-    train_df = sets["train_df"]
-    val_df = sets["test_df"]
+    df = train_df.copy()
+    train_df = df.groupby("status").apply(lambda x: x.sample(frac=0.8)) # censoring frac. equal in train and test sets
+    train_df = train_df.reset_index(level="status", drop=True)
+    train_df = train_df.sort_index()
+    val_df = df.drop(train_df.index)
 
     # separate covariates and outcomes
     train_x = train_df.copy()
@@ -92,23 +98,22 @@ def deep_weibull(dataset, lr=0.01, epochs=50, steps_per_epoch=5):
     """
     Define the DeepWeibull network. 
     Model architecture: layers and widths as stated in paper; use dropout probability 0.1 and batch normalisation 
+    'glorot_normal' is Xavier initialisation
     """
 
     p = train_x.shape[1] # number of covariates
 
     model = Sequential()
 
-    model.add(Dense(p, input_dim=p, activation='tanh'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.2))
+    model.add(Dense(p, input_dim=p, activation='tanh', kernel_initializer='glorot_normal', bias_initializer='glorot_normal'))
+    model.add(Dropout(0.25))
 
-    model.add(Dense(p, activation='tanh'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.2))
+    model.add(Dense(2*p, activation='tanh', kernel_initializer='glorot_normal', bias_initializer='glorot_normal'))
+    model.add(Dropout(0.25))
 
-    model.add(Dense(p, activation='tanh'))
-    model.add(BatchNormalization())
-    model.add(Dropout(0.2))
+    model.add(Dense(p, activation='tanh', kernel_initializer='glorot_normal', bias_initializer='glorot_normal'))
+    model.add(Dropout(0.25))
+
     model.add(Dense(2)) # layer with 2 nodes (alpha and beta)
     model.add(Activation(weibull_activate)) # apply custom activation function (exp and softplus)
 
@@ -123,18 +128,25 @@ def deep_weibull(dataset, lr=0.01, epochs=50, steps_per_epoch=5):
     """
     Train the model with early stopping and plot the training and validation loss.
     """
-
-    callbacks = [] # use [EarlyStopping()] if desired
-    log = model.fit(train_x, train_y, epochs=epochs, steps_per_epoch=steps_per_epoch, validation_data=(val_x, val_y), callbacks=callbacks, validation_steps=5, verbose=2)
+    es = EarlyStopping(monitor='val_loss', mode='min', verbose=2, patience=15)
+    callbacks = [es] # use [EarlyStopping()] if desired
+    log = model.fit(train_x, train_y, 
+        epochs=epochs, 
+        steps_per_epoch=steps_per_epoch, 
+        validation_data=(val_x, val_y), 
+        callbacks=callbacks, 
+        validation_steps=5, 
+        verbose=2)
 
     plt.plot(log.history['loss'])
     plt.plot(log.history['val_loss'])
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
-    plt.title('Training loss: DeepWeibull on '+ tidy_datasets[dataset])
+    plt.title('Training loss: DeepWeibull on '+ tidy_datasets[dataset] + " (Split " + str(split) + ")")
     plt.legend(['Train', 'Validation'])
     plt.savefig(training_loss_plot_path)
     plt.clf()
+    plt.close('all')
 
     """
     Use learnt model to make predictions on the test set

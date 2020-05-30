@@ -1,13 +1,17 @@
 import pandas as pd
 import numpy as np
 
-file_path = "test_results/regression_weibull/support.pkl"
 
-df = pd.read_pickle(file_path)
+# TEST RESULTS
+df_rw = pd.read_pickle(r"test_results/regression_weibull/support_1.pkl")
+df_dw = pd.read_pickle(r"test_results/deep_weibull/support_1.pkl")
+#df_dh = pd.read_pickle(r"test_results/deep_hit/support_1.pkl")
+print(df_rw.iloc[1])
+print(max(df_dw["pred_beta"]))
 
-print(df.describe())
+# BRIER SCORES
+#df = pd.read_pickle(r"evaluation_metrics_results/brier_scores/metabric_1.pkl")
 
-a = [1,2,3,4,5,6]
-b = [4,5,1,8,9,1]
-
-print(np.minimum(a,b))
+# C-INDEX AND INTEGRATED BRIER SCORES
+#df = pd.read_pickle(r"evaluation_metrics_results/c_index_and_int_brier.pkl")
+#print(df.iloc[60:72])
