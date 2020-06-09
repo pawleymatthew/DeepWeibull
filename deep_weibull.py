@@ -51,7 +51,7 @@ tidy_datasets = {
   "rrnlnph": "RRNLNPH"
 }
 
-def deep_weibull(dataset, split, lr=10e-4, epochs=75, steps_per_epoch=25):
+def deep_weibull(dataset, split, plot=False, lr=1e-4, epochs=75, steps_per_epoch=25):
 
     """
     Paths to input and output files
@@ -138,15 +138,16 @@ def deep_weibull(dataset, split, lr=10e-4, epochs=75, steps_per_epoch=25):
         validation_steps=5, 
         verbose=2)
 
-    plt.plot(log.history['loss'])
-    plt.plot(log.history['val_loss'])
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title('Training loss: DeepWeibull on '+ tidy_datasets[dataset] + " (Split " + str(split) + ")")
-    plt.legend(['Train', 'Validation'])
-    plt.savefig(training_loss_plot_path)
-    plt.clf()
-    plt.close('all')
+    if plot==True:
+        plt.plot(log.history['loss'])
+        plt.plot(log.history['val_loss'])
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.title('Training loss: DeepWeibull on '+ tidy_datasets[dataset] + " (Split " + str(split) + ")")
+        plt.legend(['Train', 'Validation'])
+        plt.savefig(training_loss_plot_path)
+        plt.clf()
+        plt.close('all')
 
     """
     Use learnt model to make predictions on the test set

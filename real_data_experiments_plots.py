@@ -186,3 +186,47 @@ for dataset in ["metabric", "support"]:
     fig.tight_layout()
     plt.subplots_adjust(bottom = 0.12)
     plt.savefig(brier_score_plot_path)
+
+
+"""
+Plot all SUPPORT DeepHit survival curves
+"""
+
+def plot_dh_survival_curves(dataset="support", split=1):
+    
+    # path to output file
+    plot_file_path = "plots/real_data_experiments/survival_curves/all_deep_hit_support.pdf" 
+
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(8,12)) # 3x1 subplots
+
+    for i in range(20):
+
+        get_surv = get_survival_curves(dataset, split, i=i)
+        
+        S = get_surv["S_rw"]
+        t = get_surv["weibull_t_vals"]
+        ax1.plot(t, S)[0]
+
+        S = get_surv["S_dw"]
+        t = get_surv["weibull_t_vals"]
+        ax2.plot(t, S)[0]
+
+        S = get_surv["S_dh"]
+        t = get_surv["dh_t_vals"]
+        ax3.plot(t, S)[0]
+
+    ax1.set_xlabel(r'$t$')
+    ax2.set_xlabel(r'$t$')
+    ax3.set_xlabel(r'$t$')
+
+    ax1.set_ylabel(r'$\hat{S}(t)$')
+    ax2.set_ylabel(r'$\hat{S}(t)$')
+    ax3.set_ylabel(r'$\hat{S}(t)$')
+
+    ax1.set_title("RegressionWeibull")
+    ax2.set_title("DeepWeibull")
+    ax3.set_title("DeepHit")
+    fig.tight_layout()
+    plt.savefig(plot_file_path)
+
+plot_dh_survival_curves()

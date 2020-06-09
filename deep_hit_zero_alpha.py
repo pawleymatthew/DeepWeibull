@@ -28,7 +28,7 @@ tidy_datasets = {
   "rrnlnph": "RRNLNPH"
 }
 
-def deep_hit_zero_alpha(dataset, split, lr=10e-3, epochs=50, batch_size=100):
+def deep_hit_zero_alpha(dataset, split,plot=False, lr=10e-3, epochs=50, batch_size=100):
 
     """
     Paths to input and output files
@@ -103,14 +103,15 @@ def deep_hit_zero_alpha(dataset, split, lr=10e-3, epochs=50, batch_size=100):
     callbacks = [tt.callbacks.EarlyStopping()]
     log = model.fit(train_x, train_y, batch_size, epochs, callbacks, val_data=(val_x, val_y))
 
-    log.plot()
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title("Training loss: DeepHit ($\\alpha =0$) on " + tidy_datasets[dataset] + " (Split " + str(split) + ")")
-    plt.legend(['Train', 'Validation'])
-    plt.savefig(training_loss_plot_path)
-    plt.clf()
-    plt.close('all')
+    if plot==True:
+      log.plot()
+      plt.xlabel("Epoch")
+      plt.ylabel("Loss")
+      plt.title("Training loss: DeepHit ($\\alpha =0$) on " + tidy_datasets[dataset] + " (Split " + str(split) + ")")
+      plt.legend(['Train', 'Validation'])
+      plt.savefig(training_loss_plot_path)
+      plt.clf()
+      plt.close('all')
     
     """
     Predict the survival curves for the test set 

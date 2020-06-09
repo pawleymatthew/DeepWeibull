@@ -34,7 +34,7 @@ tidy_datasets = {
   "rrnlnph": "RRNLNPH"
 }
 
-def deep_hit(dataset, split, alpha=5, lr=10e-4, epochs=50, batch_size=100):
+def deep_hit(dataset, split, plot=False, alpha=0.5, lr=1e-4, epochs=50, batch_size=100):
 
     """
     Paths to input and output files
@@ -110,14 +110,15 @@ def deep_hit(dataset, split, alpha=5, lr=10e-4, epochs=50, batch_size=100):
     callbacks = [tt.callbacks.EarlyStopping()]
     log = model.fit(train_x, train_y, batch_size, epochs, callbacks, val_data=(val_x, val_y))
 
-    log.plot()
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.title("Training loss: DeepHit ($\\alpha =$" + str(alpha) + ") on " + tidy_datasets[dataset] + " (Split " + str(split) + ")")
-    plt.legend(['Train', 'Validation'])
-    plt.savefig(training_loss_plot_path)
-    plt.clf()
-    plt.close('all')
+    if plot ==True: 
+      log.plot()
+      plt.xlabel("Epoch")
+      plt.ylabel("Loss")
+      plt.title("Training loss: DeepHit ($\\alpha =$" + str(alpha) + ") on " + tidy_datasets[dataset] + " (Split " + str(split) + ")")
+      plt.legend(['Train', 'Validation'])
+      plt.savefig(training_loss_plot_path)
+      plt.clf()
+      plt.close('all')
     
     """
     Predict the survival curves for the test set 

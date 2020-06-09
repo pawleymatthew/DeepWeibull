@@ -95,8 +95,8 @@ WEIBULL EXPERIMENTS
 REAL DATA EXPERIMENTS
 """
 
-models = ["deep_hit_zero_alpha"]
-splits = [1,2,3]
+models = ["deep_hit"]
+splits = [1]
 datasets = ["support"]
 run_models(datasets, splits, models)
 
