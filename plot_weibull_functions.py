@@ -61,3 +61,32 @@ ax1.set_aspect('auto')
 ax2.set_aspect('auto')
 plt.savefig(plot_file_path)
 
+plt.figure(2)
+
+plot_file_path = "plots/parametric_dist_curves/weibull_surv.pdf"
+
+S = lambda t,a,b: np.exp(-(t/a)**b) # survival function of Weibull(a,b)
+h = lambda t,a,b: (b/a)*(t/a)**(b-1) # hazard function of Weibull(a,b)
+
+# t values
+t = np.arange(start=0.001,stop=100.001,step=0.2) 
+# fixed alpha
+alpha = 50 
+# beta values
+beta1 = 0.75 
+beta2 = 1
+beta3 = 3
+
+# survival curves
+S1 = S(t, alpha, beta1)
+S2 = S(t, alpha, beta2)
+S3 = S(t, alpha, beta3)
+
+plt.plot(t, S1, color="blue")[0]
+plt.plot(t, S2, color="orange")[0]
+plt.plot(t, S3, color="green")[0]
+
+plt.xlabel(r'$t$')
+plt.ylabel(r'$S(t)$')
+plt.tight_layout()
+plt.savefig(plot_file_path)
